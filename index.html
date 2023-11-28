@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+</head>
+<body>
+	<div
+		data-text="Pizda"
+		class="component-button">
+	</div>
+
+
+	<div 
+		data-list="Pop,Up,Grate,Home,New"
+		data-component="list"
+		class="component-list">
+	</div>
+
+
+	<div 
+		data-component="button"
+		data-images="google.com,2,3,4,5,6"
+		class="component-images">
+	</div>
+
+
+	<div id="container"></div>
+	<script type="module">
+
+		const definedComponentsAttrs = {}
+
+		let observer = new MutationObserver(mutationRecords => {
+			for (const mutation of mutationRecords) {
+				if (mutation.type === "childList") {
+					for(let index = 0; index < mutation.addedNodes.length; index++) {
+						const node = mutation.addedNodes[index]
+						if(node.name !== '#text' && node.getAttribute) {
+			
+						}	
+					}
+			   	}
+			}
+		});
+
+		observer.observe(document.body, {
+		  	childList: true, 
+		  	subtree: true, 
+		});
+
+
+		function getInner(node){
+			return [...node.querySelectorAll('[data-component]')]
+		}
+
+		const fetched = {}
+
+
+		async function createComponent(componentName, upgradeComponent){
+			let template =fetched[componentName]
+
+			if(!template) {
+				template = await fetch(`./components/${componentName}.html`)
+				.then(res=>res.text()).then((res)=>res)	
+				if(template) {
+					fetched[componentName] = template
+				}
+			}
+			
+			const empties = document.querySelectorAll('.component-' + componentName)
+			const parser = new DOMParser();
+
+			//dom.firstElementChild.content
+
+			const componentDoc= parser.parseFromString(template, "text/html");
+			const noResponse = template.includes('Not Found');
+			//console.log(componentDoc.documentElement);
+
+			[...empties].forEach(elTarget=>{
+				const component = noResponse ? document.createElement('div') : componentDoc.documentElement.querySelector('body > :first-child')
+				const values = {}
+
+				const attrs = [].filter.call(elTarget.attributes, at => /^data-/.test(at.name));
+
+				attrs.forEach(attribute=>{
+					values[attribute.name] = {
+						target: noResponse ? component : component.querySelector(`[${attribute.name}]`),
+						value: attribute.value
+					}
+					if(!upgradeComponent) {
+						const textHolder = noResponse ? component : component.querySelector(`[${attribute.name}]`)
+						if(textHolder) {
+							textHolder.textContent = attribute.value
+						}
+					}
+				})
+
+				upgradeComponent && upgradeComponent(component, values, elTarget)
+
+				elTarget.classList.add(...component.classList)
+				elTarget.replaceChildren(...component.children)
+
+				getInner(elTarget).forEach(item=>{
+					if(item.getAttribute('data-init')) return 
+					const name = item.getAttribute('data-component')
+					const params = {
+						name,
+						node: item,
+					}
+
+					if(definedComponentsAttrs[name]){
+						params.attrs = definedComponentsAttrs[name]
+						console.log(definedComponentsAttrs[name])
+					}	
+
+					setTimeout(setupComponent(params))
+
+				})
+			})
+
+		}
+
+		initApp()
+
+
+		function initApp(){
+			initComponent({
+				name: 'list',
+				attrs(key, value, target){
+					if(key === 'data-list') {
+						const list = value.split(',')
+						const children = []
+						list.forEach(item=>{
+							const li = document.createElement('li')
+							li.textContent = item
+							children.push(li)
+						})
+
+						const ul = document.createElement('ul')
+						ul.replaceChildren(...children)
+						console.log(ul)
+						target.replaceChildren(ul)
+					}
+				},
+			})
+
+			initComponent({
+				name: 'button',
+				attrs(key, value, target){
+					if(key === 'data-text') {
+						target.textContent = value
+					}
+				},
+			})
+
+			initComponent({
+				name: 'images',
+				attrs(key, value, target, wrapper){
+					if(key === 'data-images') {
+						const list = value.split(',')
+						const children = []
+						list.forEach(item=>{
+							const img = document.createElement('img')
+							img.setAttribute('src', item)
+							children.push(img)
+						})
+
+						target.replaceChildren(...children)
+					}
+				}
+			})
+		}
+
+		function setupComponent({
+			name,
+			attrs,
+			node
+		}){
+
+			if(!node) return
+			const attributes = {}
+
+			const dataAttrs = [].filter.call(node.attributes, at => /^data-/.test(at.name));
+
+
+			dataAttrs.forEach(item=>{
+				attributes[item.name] = {
+					target: node,
+					value: item.value
+				}
+			})
+
+			node.setAttribute('data-init', true)
+
+			if(!definedComponentsAttrs[name]) {
+				definedComponentsAttrs[name] = attrs
+			} 
+
+			Object.keys(attributes).forEach(key=>{
+				const { value, target } = attributes[key]
+				if(!target) return
+				attrs(key, value, target, node)
+			})
+
+			let observer = new MutationObserver(mutationRecords => {
+			  	for (const mutation of mutationRecords) {
+				    if (mutation.type === "attributes") {
+				    	if(!mutation.attributeName.includes('data')) return 
+				    	const value = mutation.target.attributes[mutation.attributeName].value
+				    	value && attrs(mutation.attributeName, value, mutation.target, node)
+				      	//console.log(`The ${mutation.attributeName} attribute was modified.`);
+				    }
+				 }
+			});
+
+			observer.observe(node, {
+				attributeOldValue: true,
+			  	attributes: true
+			});
+		}
+
+
+		function initComponent({
+			name,
+			attrs,
+			node
+		}){
+			createComponent(name, (component, attributes, elTarget)=>{
+				elTarget.setAttribute('data-init', true)
+				if(!definedComponentsAttrs[name]) {
+					definedComponentsAttrs[name] = attrs
+				} 
+
+				Object.keys(attributes).forEach(key=>{
+					const { value, target } = attributes[key]
+					if(!target) return
+					attrs(key, value, target, elTarget)
+				})
+
+				let observer = new MutationObserver(mutationRecords => {
+				  	console.log(name, mutationRecords)
+
+				  	for (const mutation of mutationRecords) {
+					    if (mutation.type === "attributes") {
+					    	if(!mutation.attributeName.includes('data')) return 
+					    	const value = mutation.target.attributes[mutation.attributeName].value
+					    	value && attrs(mutation.attributeName, value, mutation.target, elTarget)
+					      	//console.log(`The ${mutation.attributeName} attribute was modified.`);
+					    }
+					 }
+				});
+
+				observer.observe(elTarget, {
+					attributeOldValue: true,
+				  	attributes: true
+				});
+
+			}, node ? [node] : null)
+
+		}
+
+	</script>
+	
+</body>
+</html>
