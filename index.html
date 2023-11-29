@@ -9,6 +9,7 @@
 
 	<div
 		data-text="Hohu"
+		data-list="create,нахуй, все блад"
 		data-component="button">
 	</div>
 
@@ -199,13 +200,12 @@
 			[...empties].forEach(async elTarget=>{
 				const componentName = elTarget.getAttribute('data-component')
 				const component = await getComponent(componentName)
+				const elTargetAttributes = [].filter.call(elTarget.attributes, at => /^data-/.test(at.name));
 
 				const inner = getInner(component)
 
 				if(inner.length) {
 					elTarget.replaceChildren(component)
-
-					const dataAttrs = [].filter.call(elTarget.attributes, at => /^data-/.test(at.name));
 
 					const name = elTarget.getAttribute('data-component')
 					
@@ -232,7 +232,17 @@
 
 						const dataAttrs = [].filter.call(item.attributes, at => /^data-/.test(at.name));
 						params.dataAttrs = dataAttrs
-		
+
+
+						elTargetAttributes.forEach((item)=>{
+							const current = dataAttrs.find(at=>at.name === item.name)
+							if(current) {
+								if(current.value === item.name) {
+									current.value = item.value	
+								}
+							}
+						})
+
 						await setupComponent(params)
 					
 					}
@@ -241,14 +251,12 @@
 					//const div = createElement('div')
 					//elTarget.replaceChildren(component)
 				} else {
-					const dataAttrs = [].filter.call(elTarget.attributes, at => /^data-/.test(at.name));
-
 					const result = await setupComponent({
 						name: componentName,
 						node: elTarget,
 						attrs: definedComponentsAttrs[componentName],
 
-						dataAttrs
+						dataAttrs: elTargetAttributes
 					})
 
 					if(result[Symbol.iterator]) {
