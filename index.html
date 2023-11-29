@@ -6,8 +6,16 @@
 	<title>Document</title>
 </head>
 <body>
+
+	<div
+		data-text="Hohu"
+		data-component="button">
+	</div>
+
+
 	<div
 		data-text="Pizda"
+		data-component="button"
 		class="component-button">
 	</div>
 
@@ -18,9 +26,15 @@
 		class="component-list">
 	</div>
 
+	<div 
+		data-list="1,2,3,4,5"
+		data-component="list"
+		class="component-list">
+	</div>
+
 
 	<div 
-		data-component="button"
+		data-component="images"
 		data-images="google.com,2,3,4,5,6"
 		class="component-images">
 	</div>
@@ -30,6 +44,9 @@
 	<script type="module">
 
 		const definedComponentsAttrs = {}
+		const fetchedComponents = {}
+		const fetched = {}
+
 
 		let observer = new MutationObserver(mutationRecords => {
 			for (const mutation of mutationRecords) {
@@ -54,7 +71,6 @@
 			return [...node.querySelectorAll('[data-component]')]
 		}
 
-		const fetched = {}
 
 
 		async function createComponent(componentName, upgradeComponent){
@@ -101,7 +117,7 @@
 				elTarget.classList.add(...component.classList)
 				elTarget.replaceChildren(...component.children)
 
-				getInner(elTarget).forEach(item=>{
+				getInner(elTarget).forEach(async item=>{
 					if(item.getAttribute('data-init')) return 
 					const name = item.getAttribute('data-component')
 					const params = {
@@ -114,8 +130,7 @@
 						console.log(definedComponentsAttrs[name])
 					}	
 
-					setTimeout(setupComponent(params))
-
+					await setupComponent(params)
 				})
 			})
 
@@ -139,7 +154,6 @@
 
 						const ul = document.createElement('ul')
 						ul.replaceChildren(...children)
-						console.log(ul)
 						target.replaceChildren(ul)
 					}
 				},
@@ -149,7 +163,12 @@
 				name: 'button',
 				attrs(key, value, target){
 					if(key === 'data-text') {
-						target.textContent = value
+						const doc = target.querySelector('[data-text]')
+						if(doc) {
+							doc.textContent = value
+						} else {
+							target.textContent = value
+						}
 					}
 				},
 			})
@@ -170,36 +189,163 @@
 					}
 				}
 			})
+
+			initComponents()
 		}
 
-		function setupComponent({
+		function initComponents() {
+			const empties = document.querySelectorAll('[data-component]');
+
+			[...empties].forEach(async elTarget=>{
+				const componentName = elTarget.getAttribute('data-component')
+				const component = await getComponent(componentName)
+
+				const inner = getInner(component)
+
+				if(inner.length) {
+					elTarget.replaceChildren(component)
+
+					const dataAttrs = [].filter.call(elTarget.attributes, at => /^data-/.test(at.name));
+
+					const name = elTarget.getAttribute('data-component')
+					
+					let attrsFunc = null
+					if(definedComponentsAttrs[name]){
+						attrsFunc = definedComponentsAttrs[name]
+					}	
+
+					setupComponent({ node: elTarget, attrs: attrsFunc, name })
+
+
+					const components = []
+					for (const item of inner) {
+						if(item.getAttribute('data-init')) return 
+
+						const name = item.getAttribute('data-component')
+						const params = {
+							name,
+							node: item,
+						}
+						if(definedComponentsAttrs[name]){
+							params.attrs = definedComponentsAttrs[name]
+						}	
+
+						const dataAttrs = [].filter.call(item.attributes, at => /^data-/.test(at.name));
+						params.dataAttrs = dataAttrs
+		
+						await setupComponent(params)
+					
+					}
+				
+
+					//const div = createElement('div')
+					//elTarget.replaceChildren(component)
+				} else {
+					const dataAttrs = [].filter.call(elTarget.attributes, at => /^data-/.test(at.name));
+
+					const result = await setupComponent({
+						name: componentName,
+						node: elTarget,
+						attrs: definedComponentsAttrs[componentName],
+
+						dataAttrs
+					})
+
+					if(result[Symbol.iterator]) {
+						elTarget.replaceChildren(...result)
+					} else {
+						elTarget.replaceChildren(result)
+					}
+
+
+				}
+
+			})
+
+		}
+
+		async function getComponent(componentName){
+
+			let path = `./components/${componentName}.html`
+			let template = null
+
+			if(fetchedComponents[path]) {
+				template = fetchedComponents[path]
+			}
+
+			if(!template) {
+				template = await fetch(path)
+					.then(res=>res.text()).then((res)=>res)
+
+				const noResponse = template.includes('Not Found');
+				if(!noResponse && template) {
+				 	fetchedComponents[path] = template
+				} 
+
+				if(noResponse) {
+					template = null
+				}
+
+				fetchedComponents[path] = template
+
+			}
+
+
+			const componentDoc = template ? 
+				new DOMParser().parseFromString(template, "text/html") : null
+
+
+
+			const component = componentDoc ? 
+				componentDoc.documentElement.querySelector('body > :first-child') :
+				document.createElement('div') 
+
+			return component
+		}
+
+
+		function hasDataAttrs(node) {
+			return [].filter.call(node.attributes, at => /^data-/.test(at.name)).length;
+		}
+
+		async function setupComponent({
 			name,
 			attrs,
-			node
+			node,
+			dataAttrs
 		}){
+			if(!node) {
+				node = await getComponent(name)
+			}
 
-			if(!node) return
-			const attributes = {}
+			if(node.getAttribute('data-init')) return node
+			node.setAttribute('data-init', true)
 
-			const dataAttrs = [].filter.call(node.attributes, at => /^data-/.test(at.name));
+			const initAttributes = {}
 
-
-			dataAttrs.forEach(item=>{
-				attributes[item.name] = {
+			let initAttrs = dataAttrs || [].filter.call(node.attributes, at => /^data-/.test(at.name));
+			initAttrs.forEach(item=>{
+				initAttributes[item.name] = {
 					target: node,
 					value: item.value
 				}
 			})
 
-			node.setAttribute('data-init', true)
 
-			if(!definedComponentsAttrs[name]) {
+			if(!definedComponentsAttrs[name] && attrs) {
 				definedComponentsAttrs[name] = attrs
 			} 
 
-			Object.keys(attributes).forEach(key=>{
-				const { value, target } = attributes[key]
+			if(!attrs) {
+				attrs = definedComponentsAttrs[name]
+			}
+
+			if(!attrs) return node
+
+			Object.keys(initAttributes).forEach(key=>{
+				const { value, target } = initAttributes[key]
 				if(!target) return
+
 				attrs(key, value, target, node)
 			})
 
@@ -218,45 +364,49 @@
 				attributeOldValue: true,
 			  	attributes: true
 			});
+
+			return node
 		}
 
 
-		function initComponent({
+		async function initComponent({
 			name,
 			attrs,
 			node
 		}){
-			createComponent(name, (component, attributes, elTarget)=>{
-				elTarget.setAttribute('data-init', true)
-				if(!definedComponentsAttrs[name]) {
-					definedComponentsAttrs[name] = attrs
-				} 
 
-				Object.keys(attributes).forEach(key=>{
-					const { value, target } = attributes[key]
-					if(!target) return
-					attrs(key, value, target, elTarget)
-				})
+			if(attrs && !definedComponentsAttrs[name]) {
+				definedComponentsAttrs[name] = attrs
+			} 
 
-				let observer = new MutationObserver(mutationRecords => {
-				  	console.log(name, mutationRecords)
+			// await createComponent(name, (component, attributes, elTarget)=>{
+			// 	elTarget.setAttribute('data-init', true)
 
-				  	for (const mutation of mutationRecords) {
-					    if (mutation.type === "attributes") {
-					    	if(!mutation.attributeName.includes('data')) return 
-					    	const value = mutation.target.attributes[mutation.attributeName].value
-					    	value && attrs(mutation.attributeName, value, mutation.target, elTarget)
-					      	//console.log(`The ${mutation.attributeName} attribute was modified.`);
-					    }
-					 }
-				});
+			// 	Object.keys(attributes).forEach(key=>{
+			// 		const { value, target } = attributes[key]
+			// 		if(!target) return
+			// 		attrs(key, value, target, elTarget)
+			// 	})
 
-				observer.observe(elTarget, {
-					attributeOldValue: true,
-				  	attributes: true
-				});
+			// 	let observer = new MutationObserver(mutationRecords => {
+			// 	  	console.log(name, mutationRecords)
 
-			}, node ? [node] : null)
+			// 	  	for (const mutation of mutationRecords) {
+			// 		    if (mutation.type === "attributes") {
+			// 		    	if(!mutation.attributeName.includes('data')) return 
+			// 		    	const value = mutation.target.attributes[mutation.attributeName].value
+			// 		    	value && attrs(mutation.attributeName, value, mutation.target, elTarget)
+			// 		      	//console.log(`The ${mutation.attributeName} attribute was modified.`);
+			// 		    }
+			// 		 }
+			// 	});
+
+			// 	observer.observe(elTarget, {
+			// 		attributeOldValue: true,
+			// 	  	attributes: true
+			// 	});
+
+			// }, node ? [node] : null)
 
 		}
 
