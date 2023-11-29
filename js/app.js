@@ -1,64 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Document</title>
-</head>
-<body>
-
-
-	<div data-component="layout" data-layout="relative">
-		<div>
-			<a href="#profile">Profile</a>
-			<a href="#lazy">lazy</a>
-		</div>
-		<div data-view></div>
-	</div>
-
-	<div
-		data-text="Hohu"
-		data-list="create,нахуй, все блад"
-		data-component="button">
-	</div>
-
-
-	<div
-		data-text="Pizda"
-		data-component="button"
-		class="component-button">
-	</div>
-
-
-	<div 
-		data-list="Pop,Up,Grate,Home,New"
-		data-component="list"
-		class="component-list">
-	</div>
-
-	<div 
-		data-list="1,2,3,4,5"
-		data-component="list"
-		class="component-list">
-	</div>
-
-
-	<div 
-		data-component="images"
-		data-images="google.com,2,3,4,5,6"
-		class="component-images">
-	</div>
-
-
-	<div id="container"></div>
-	<script type="module">
-		import { initApp } from './js/app.js'
-
-		initApp()
-
-	</script>
-
-	<script type="module">
 
 		const definedComponentsAttrs = {}
 		const fetchedComponents = {}
@@ -89,10 +28,7 @@
 		}
 
 
-		//initApp()
-
-
-		function initApp(){
+		export function initApp(){
 			initComponent({
 				name: 'layout',
 				attrs(key, value, target){
@@ -237,7 +173,7 @@
 		}
 
 		async function getPage(componentName){
-			let path = `./pages/${componentName}.html`
+			let path = `../pages/${componentName}.html`
 			let template = null
 
 			if(fetchedPages[componentName]) {
@@ -298,14 +234,14 @@
 			}
 		}		
 
-		// window.addEventListener('hashchange',async ()=>{
-		// 	loadPage()
-		// })
+		window.addEventListener('hashchange',async ()=>{
+			loadPage()
+		})
 
 
 		async function getComponent(componentName){
 
-			let path = `./components/${componentName}.html`
+			let path = `../components/${componentName}.html`
 			let template = null
 
 			if(fetchedComponents[path]) {
@@ -419,7 +355,3 @@
 
 		}
 
-	</script>
-	
-</body>
-</html>
