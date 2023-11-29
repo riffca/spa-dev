@@ -28,7 +28,12 @@
 		}
 
 
-		export function initApp(){
+		export function initApp(components){
+			if(components) {
+				components.forEach(item=>{
+					initComponent(item)
+				})
+			}
 			initComponent({
 				name: 'layout',
 				attrs(key, value, target){
