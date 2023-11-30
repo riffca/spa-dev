@@ -13,7 +13,10 @@
 		</div>
 		<div data-view></div>
 	</div>
+
+
 	<div
+		class="target"
 		data-text="Hohu"
 		data-list="create,нахуй, все блад"
 		data-component="button">
@@ -53,9 +56,82 @@
 
 	<div id="container"></div>
 	<script type="module">
-		import { initApp } from './js/app.js'
+		import { initDomApp } from './js/app.js'
 
-		initApp([
+		const listeners = new Map()
+
+		function addEventListener(target, event, handler){
+			target.addEventListener(event, handler)
+			listeners.set(handler, target)
+		}
+
+		function bindElement(selector, extend){
+			const app = {
+				lib: {
+					target: document.querySelector(selector),
+					setAttribute(attr, val){
+						this.target.setAttribute('data-'+ attr, val)
+					}
+				},
+				...extend
+			}
+
+			if(extend.click) {
+				addEventListener(app.lib.target,'click',extend.click)
+			}
+
+			const wrap = new Proxy(app, {
+			  set(target, prop, value) {
+			  	console.log(target, prop)
+				target[prop] = value
+
+				if(typeof value === 'object') {
+					app.lib.setAttribute(prop, JSON.stringify(value))
+				} else {
+					app.lib.setAttribute(prop, value)
+
+				}
+				//return Reflect.set(target, prop, value, receiver)
+				return true
+			  }
+			});
+			return wrap
+		}
+
+
+		const componentButtonInterface = bindElement('.target',{
+			loaded: false,
+			companies: [],
+			async loadCompanies(){
+				const response = await Promise.resolve([{name: 'one', name: 'two'}])
+				this.loaded = true
+				this.companies = JSON.stringify(response)
+			}
+
+			click: ()=>{
+				componentButtonInterface.text = "Vova"; 
+				componentButtonInterface.children = [1,2,3,4,5]
+				componentButtonInterface.loadCompanies()
+			}
+		})
+
+
+		function loadImage() {
+			const imgs = fetch('img').then(data=>res.json())
+			componentButtonInterface.images = imgs
+		}
+
+
+		// setTimeout(async ()=>{ 
+		// 	componentButtonInterface.text = "Vova"; 
+		// 	componentButtonInterface.children = [1,2,3,4,5]
+		// 	componentButtonInterface.loadCompanies()
+		// },2000)
+
+
+
+
+		initDomApp([
 			{
 				name: 'clone',
 				attrs(key, value, target){

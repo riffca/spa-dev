@@ -28,7 +28,7 @@
 		}
 
 
-		export function initApp(components){
+		export function initDomApp(components){
 			if(components) {
 				components.forEach(item=>{
 					initComponent(item)
@@ -181,8 +181,8 @@
 			let path = `../pages/${componentName}.html`
 			let template = null
 
-			if(fetchedPages[componentName]) {
-				template = fetchedPages[componentName]
+			if(fetchedPages[path]) {
+				template = fetchedPages[path]
 			}
 
 			if(!template) {
@@ -190,15 +190,42 @@
 					.then(res=>res.text()).then((res)=>res)
 				const noResponse = template.includes('Not Found');
 				if(!noResponse && template) {
-				 	fetchedPages[componentName] = template
+				 	fetchedPages[path] = template
 				} 
 				if(noResponse) {
 					template = null
 				}
-				fetchedPages[componentName] = template
+				fetchedPages[path] = template
 			}
 
 			return template
+		}
+
+
+		async function fetchComponent(componentName, pages="pages"){
+			let path = `../${pages}/${componentName}.html`
+			let template = null
+
+			if(fetchedPages[path]) {
+				template = fetchedPages[path]
+			}
+
+			if(!template) {
+				template = await fetch(path)
+					.then(res=>res.text()).then((res)=>res)
+				const noResponse = template.includes('Not Found');
+				if(!noResponse && template) {
+				 	fetchedPages[path] = template
+				} 
+				if(noResponse) {
+					template = null
+				}
+				fetchedPages[path] = template
+			}
+
+			const { innerHtml, script } = getTemplate(template, path)
+
+			return { innerHtml, script }
 		}
 
 
@@ -206,10 +233,20 @@
 
 		async function loadPage(){
 			const path = location.hash.slice(1)
-			const template = await getPage(path)
+			const { innerHtml, script } = await fetchComponent(path)
 			const component = document.querySelector('[data-view]')
-			console.log(template)
+	
+			component.replaceChildren(innerHtml)
+			script && eval(script.textContent)
+			initComponents()
+		}		
 
+		window.addEventListener('hashchange',async ()=>{
+			loadPage()
+		})
+
+
+		function getTemplate(template, path){
 			const componentDoc = template ? 
 				new DOMParser().parseFromString(template, "text/html") : null
 
@@ -219,16 +256,20 @@
 
 			const script = componentDoc ? componentDoc.documentElement.querySelector('script') : null
 			const style = componentDoc ? componentDoc.documentElement.querySelector('style') : null
-	
+
+			loadStyleAndScript(script, style, path)
+
+
+			return { innerHtml, script }
+		}
+
+		function loadStyleAndScript(script, style, path){
 			// const inserScript = document.createElement('script')
 			// inserScript.innerHtml = script.textContent
 			// console.log(inserScript.innerHtml)
 			// document.body.appendChild(inserScript)
+			//script && eval(script.textContent)
 
-			component.replaceChildren(innerHtml)
-			script && eval(script.textContent)
-			initComponents()
-			
 			if(fetchedStyles[path]) return	
 			if(style) {
 				const insertStyle = document.createElement('style')
@@ -237,11 +278,7 @@
 				document.head.appendChild(insertStyle)
 				fetchedStyles[path] = true
 			}
-		}		
-
-		window.addEventListener('hashchange',async ()=>{
-			loadPage()
-		})
+		}
 
 
 		async function getComponent(componentName){
@@ -271,16 +308,7 @@
 			}
 
 
-			const componentDoc = template ? 
-				new DOMParser().parseFromString(template, "text/html") : null
-
-
-
-			const component = componentDoc ? 
-				componentDoc.documentElement.querySelector('body > :first-child') :
-				document.createElement('div') 
-
-			return component
+			return getTemplate(template, path).innerHtml
 		}
 
 
@@ -359,4 +387,8 @@
 			}
 
 		}
+
+
+window.$spa = {}
+window.$spa.initComponent = initComponent
 
