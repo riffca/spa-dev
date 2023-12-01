@@ -1,26 +1,28 @@
 
+
+
 		const definedComponentsAttrs = {}
 		const fetchedComponents = {}
 		const fetchedPages = {}
 
 
-		let observer = new MutationObserver(mutationRecords => {
-			for (const mutation of mutationRecords) {
-				if (mutation.type === "childList") {
-					for(let index = 0; index < mutation.addedNodes.length; index++) {
-						const node = mutation.addedNodes[index]
-						if(node.name !== '#text' && node.getAttribute) {
+		// let observer = new MutationObserver(mutationRecords => {
+		// 	for (const mutation of mutationRecords) {
+		// 		if (mutation.type === "childList") {
+		// 			for(let index = 0; index < mutation.addedNodes.length; index++) {
+		// 				const node = mutation.addedNodes[index]
+		// 				if(node.name !== '#text' && node.getAttribute) {
 			
-						}	
-					}
-			   	}
-			}
-		});
+		// 				}	
+		// 			}
+		// 	   	}
+		// 	}
+		// });
 
-		observer.observe(document.body, {
-		  	childList: true, 
-		  	subtree: true, 
-		});
+		// observer.observe(document.body, {
+		//   	childList: true, 
+		//   	subtree: true, 
+		// });
 
 
 		function getInner(node){
@@ -97,28 +99,37 @@
 			loadPage()
 		}
 
-		function initComponents() {
+		let slotDataInit = null
+		export function initComponents() {
 			const empties = document.querySelectorAll('[data-component]');
 			console.log([...empties].filter(item=>!item.getAttribute('data-init')));
 
 			[...empties].forEach(async elTarget=>{
 				if(elTarget.getAttribute('data-init')) return
+
 				const componentName = elTarget.getAttribute('data-component')
-				const component = await getComponent(componentName)
+				const { innerHtml: component, script } = await getComponent(componentName)
 				const elTargetAttributes = [].filter.call(elTarget.attributes, at => /^data-/.test(at.name));
+
+				const slot = component.querySelector('[data-slot]')
+				// if(slot) {
+				// 	if(elTarget.innerHtml) {
+				// 		slot.replaceChildren(...elTarget.children)
+				// 	} else {
+				// 		slot.textContent = elTarget.textContent
+				// 	}
+				// }
 
 				const inner = getInner(component)
 
-				if(inner.length) {
+				if(inner.length) {	
 					elTarget.replaceChildren(component)
 
 					const name = elTarget.getAttribute('data-component')
-					
 					let attrsFunc = null
 					if(definedComponentsAttrs[name]){
 						attrsFunc = definedComponentsAttrs[name]
 					}	
-
 					setupComponent({ node: elTarget, attrs: attrsFunc, name })
 
 
@@ -158,7 +169,7 @@
 				} else {
 					const result = await setupComponent({
 						name: componentName,
-						node: elTarget,
+						node: script ? component : elTarget,
 						attrs: definedComponentsAttrs[componentName],
 
 						dataAttrs: elTargetAttributes
@@ -169,9 +180,9 @@
 					} else {
 						elTarget.replaceChildren(result)
 					}
-
-
 				}
+
+				if(script) loadjs(script.textContent)
 
 			})
 
@@ -237,7 +248,7 @@
 			const component = document.querySelector('[data-view]')
 	
 			component.replaceChildren(innerHtml)
-			script && eval(script.textContent)
+			script && loadjs(script.textContent)
 			initComponents()
 		}		
 
@@ -308,7 +319,7 @@
 			}
 
 
-			return getTemplate(template, path).innerHtml
+			return getTemplate(template, path)
 		}
 
 
@@ -322,8 +333,11 @@
 			node,
 			dataAttrs
 		}){
+			let embedScript
 			if(!node) {
-				node = await getComponent(name)
+				const { innerHtml, script } = await getComponent(name)
+				node = innerHtml
+				embedScript = script
 			}
 
 			if(node.getAttribute('data-init')) return node
@@ -362,7 +376,7 @@
 				    if (mutation.type === "attributes") {
 				    	if(!mutation.attributeName.includes('data')) return 
 				    	const value = mutation.target.attributes[mutation.attributeName].value
-				    	value && attrs(mutation.attributeName, value, mutation.target, node)
+				    	attrs(mutation.attributeName, value, mutation.target, node)
 				      	//console.log(`The ${mutation.attributeName} attribute was modified.`);
 				    }
 				 }
@@ -377,18 +391,35 @@
 		}
 
 
-		async function initComponent({
+		export async function initComponent({
 			name,
 			attrs,
-		}){
+			node,
+		}, setup=false){
 
 			if(attrs && !definedComponentsAttrs[name]) {
 				definedComponentsAttrs[name] = attrs
 			}
 
+			if(setup) {
+				setupComponent({
+					name,
+					attrs,
+					node
+				})
+			}
+
+		}
+		const scriptsLoaded = new Set()
+		function loadjs (script) {
+			if(scriptsLoaded.has(script)) return
+			scriptsLoaded.add(script)
+		  var js = document.createElement("script");
+		  js.setAttribute('type', 'module')
+		  js.textContent = script;
+
+		  document.head.appendChild(js);
 		}
 
 
-window.$spa = {}
-window.$spa.initComponent = initComponent
 

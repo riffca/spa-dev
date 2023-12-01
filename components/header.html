@@ -1,0 +1,74 @@
+<header>
+		<div>Hello from Header</div>
+		<div>
+			<a href="#profile">Profile</a>
+			<a href="#lazy">lazy</a>
+			<input data-header-input />
+		</div>
+
+		<div class="header-auth">
+			<button class="header-logout">Log out</button>
+		</div>
+
+		<div data-slot></div>
+</header>
+<script>
+		const InterHeader = $spa.bindElement('[data-component=header]',{
+			loaded: false,
+			profile: null,
+			text: null,
+			async loadProfile(){
+				const response = await Promise.resolve([{name: 'one'}])
+				InterHeader.loaded = true
+				InterHeader.profile = JSON.stringify(response)
+			},
+			async click(event){
+				if(event.target.classList.contains('header-logout')) {
+					console.log(event.target)
+				}
+			},
+
+		}, 	
+		{ 
+			update(prop,value) {
+				if(prop === 'text') {
+					const div = InterHeader.lib.target.querySelector('button')
+					div.hidden = true
+				}
+			}
+
+		})
+
+		InterHeader.text = 10
+		$spa.initComponent({
+			name: 'header',
+			attrs: (key, value, target)=>{
+				console.log(123, value)
+				if(key === 'data-text') {
+					console.log(value)
+					target.querySelector('input').value = value
+				}
+			},
+			node: InterHeader.lib.target
+		}, true)
+
+		setTimeout(()=>{
+			InterHeader.text = '12'
+		},2000)
+
+		const input = InterHeader.lib.target.querySelector(['[data-header-input]'])
+
+		$spa.addEventListener(input, 'input',(event)=>{
+			InterHeader.text = event.target.value
+		})
+</script>
+<style>
+	
+	header {
+		height: 200px;
+		background: red;
+		color: white;
+		display: flex;
+		justify-content: space-between;
+	}
+</style>
