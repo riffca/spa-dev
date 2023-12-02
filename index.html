@@ -4,158 +4,24 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Document</title>
+	<script src="https://cdn.tailwindcss.com"></script>
 	<style>
-		html, body { padding: 0; margin: 0; }
+		html, body { padding: 0; margin: 0; height: 100%; }
 	</style>
 </head>
 <body>
 
-
-	<div data-component="layout" data-layout="relative">
-		<div>
-			<div data-view>1244</div>
+	<div class="h-full" data-component="layout" data-layout="relative">
+		<div class="w-full h-full">
+			<div data-view class="h-full [&>div]:h-full"></div>
 		</div>
 	</div>
 
-
-	<div
-		class="target"
-		data-text="Hohu"
-		data-list="create,нахуй, все блад"
-		data-component="button">
-	</div>
-
-	<div
-		data-text="Blaa"
-		data-component="button"
-		class="component-button">
-	</div>
-
-
-	<div
-		data-text="Pizda"
-		data-component="button"
-		class="component-button">
-	</div>
-
-
-	<div 
-		data-list="Pop,Up,Grate,Home,New"
-		data-component="list"
-		class="component-list">
-	</div>
-
-	<div 
-		data-list="1,2,3,4,5"
-		data-component="list"
-		class="component-list">
-	</div>
-
-
-	<div 
-		data-component="images"
-		data-images="google.com,2,3,4,5,6"
-		class="component-images">
-	</div>
-	<div 
-		data-component="clone"
-		data-target="[data-component=images]">
-	</div>
-
-
-	<div id="container"></div>
 	<script type="module">
 		import './js/spa.js' 
-		//import { initDomApp } from './js/dom.js'
-		//import { bindElement } from './js/interface.js'
-
 		import { runApp } from './js/dom.js'
+
 		runApp()
-
-		// const listeners = new Map()
-
-		// function addEventListener(target, event, handler){
-		// 	target.addEventListener(event, handler)
-		// 	listeners.set(handler, target)
-		// }
-
-		// function bindElement(selector, extend){
-		// 	const app = {
-		// 		lib: {
-		// 			target: document.querySelector(selector),
-		// 			setAttribute(attr, val){
-		// 				this.target.setAttribute('data-'+ attr, val)
-		// 			}
-		// 		},
-		// 		...extend
-		// 	}
-
-		// 	if(extend.click) {
-		// 		addEventListener(app.lib.target,'click',extend.click)
-		// 	}
-
-		// 	const wrap = new Proxy(app, {
-		// 	  set(target, prop, value) {
-		// 	  	console.log(target, prop)
-		// 		target[prop] = value
-
-		// 		if(typeof value === 'object') {
-		// 			app.lib.setAttribute(prop, JSON.stringify(value))
-		// 		} else {
-		// 			app.lib.setAttribute(prop, value)
-
-		// 		}
-		// 		//return Reflect.set(target, prop, value, receiver)
-		// 		return true
-		// 	  }
-		// 	});
-		// 	return wrap
-		// }
-
-
-		// const InterButton = bindElement('.target',{
-		// 	loaded: false,
-		// 	companies: [],
-		// 	async loadCompanies(){
-		// 		const response = await Promise.resolve([{name: 'one', name: 'two'}])
-		// 		this.loaded = true
-		// 		this.companies = JSON.stringify(response)
-		// 	},
-		// 	async click(event){
-		// 		if(event.target.tagName === 'INPUT') {
-		// 		}
-
-		// 		await InterButton.loadImage()
-		// 		InterButton.text = "Vova"; 
-		// 		InterButton.children = [1,2,3,4,5]
-		// 		InterButton.loadCompanies()
-		// 	},
-		// 	async loadImage(){
-		// 		const imgs = await fetch('img').then(res=>res.text())
-		// 		InterButton.images = imgs
-		// 	}
-		// })
-
-
-
-		// setTimeout(async ()=>{ 
-		// 	InterButton.text = "Vova"; 
-		// 	InterButton.children = [1,2,3,4,5]
-		// 	InterButton.loadCompanies()
-		// },2000)
-
-
-		// initDomApp([
-		// 	{
-		// 		name: 'clone',
-		// 		attrs(key, value, target){
-		// 			if(key === 'data-target') {
-		// 				const targetClone = document.querySelector(value)
-		// 				target.replaceChildren(targetClone)
-		// 			}
-		// 		}
-		// 	},
-		// ])
 
 		function listAllEventListeners() {
 		  const allElements = Array.prototype.slice.call(document.querySelectorAll('*'));

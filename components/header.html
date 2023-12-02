@@ -1,26 +1,36 @@
-<header>
-		<div>Hello from Header</div>
-		<div>
-			<a href="#profile">Profile</a>
-			<a href="#lazy">lazy</a>
-			<input data-header-input />
-		</div>
+<header class="sticky top-0">
+	<div data-component="logo"></div>
+	<div class="flex gap-2">
+		<a href="#profile">Profile</a>
+		<a href="#lazy">lazy</a>
+	</div>
+	<div>
+		<input class="text-gray-500" data-header-input />
+	</div>
 
-		<div data-component="button">
-			Привет
-		</div>
+	<div data-component="button">
+		 <div>Ass</div>
+	</div>
 
-		<div class="header-auth">
-			<button class="header-logout">Log out</button>
-		</div>
+	<div class="header-auth">
+		<button data-component="button"><div>Log out</div></button>
+		<button data-component="button" data-get-list><div>Get list</div></button>
+	</div>
 
-		<div data-slot></div>
+	<div data-slot></div>
 </header>
 
 
 <script>
+	function checkTargetParent(element, attributeName){
+		if(element.hasAttribute(attributeName)) return true
+	    if(!element.parentElement) return false
+	    const hasAttribute = element.parentElement.hasAttribute(attributeName)
+	    if(hasAttribute) return true
+	    return checkTargetParent(element.parentElement,attributeName)
+	}
 
-		const InterHeader = $spa.bindElement('[data-component=header]',{
+		const InterHeader = $spa.bindElement(`[data-init=${CSS.escape(document.currentScript.id)}]`,{
 			loaded: false,
 			profile: null,
 			text: null,
@@ -29,9 +39,29 @@
 				InterHeader.loaded = true
 				InterHeader.profile = JSON.stringify(response)
 			},
+
+			async getDrinks(){
+				const url = 'https://the-cocktail-db.p.rapidapi.com/filter.php?i=Gin';
+				const options = {
+					method: 'GET',
+					headers: {
+						'X-RapidAPI-Key': 'SIGN-UP-FOR-KEY',
+						'X-RapidAPI-Host': 'the-cocktail-db.p.rapidapi.com'
+					}
+				};
+
+				try {
+					const response = await fetch(url, options);
+					const result = await response.text();
+					console.log(result);
+				} catch (error) {
+					console.error(error);
+				}
+
+			},
 			async click(event){
-				if(event.target.classList.contains('header-logout')) {
-					console.log(event.target)
+				if(checkTargetParent(event.target,'data-get-list')){
+					InterHeader.getDrinks()
 				}
 			},
 
@@ -73,8 +103,7 @@
 	
 	header {
 		padding: 1rem;
-		height: 200px;
-		background: red;
+		background: green;
 		color: white;
 		display: flex;
 		justify-content: space-between;
