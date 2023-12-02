@@ -1,0 +1,444 @@
+
+import { getUUID } from './utils.js'
+
+		const definedComponentsAttrs = {}
+		const fetchedComponents = {}
+		const fetchedPages = {}
+
+
+		// let observer = new MutationObserver(mutationRecords => {
+		// 	for (const mutation of mutationRecords) {
+		// 		if (mutation.type === "childList") {
+		// 			for(let index = 0; index < mutation.addedNodes.length; index++) {
+		// 				const node = mutation.addedNodes[index]
+		// 				if(node.name !== '#text' && node.getAttribute) {
+			
+		// 				}	
+		// 			}
+		// 	   	}
+		// 	}
+		// });
+
+		// observer.observe(document.body, {
+		//   	childList: true, 
+		//   	subtree: true, 
+		// });
+
+
+		function getInner(node){
+			return [...node.querySelectorAll('[data-component]')]
+		}
+
+
+		export function initDomApp(components){
+			if(components) {
+				components.forEach(item=>{
+					initComponent(item)
+				})
+			}
+			initComponent({
+				name: 'layout',
+				attrs(key, value, target){
+					if(key === 'data-layout') {
+						window.qqq = target
+						target.className = value
+					}
+				},
+			})
+			initComponent({
+				name: 'list',
+				attrs(key, value, target){
+					if(key === 'data-list') {
+						const list = value.split(',')
+						const children = []
+						list.forEach(item=>{
+							const li = document.createElement('li')
+							li.textContent = item
+							children.push(li)
+						})
+
+						const ul = document.createElement('ul')
+						ul.replaceChildren(...children)
+						target.replaceChildren(ul)
+					}
+				},
+			})
+
+			initComponent({
+				name: 'button',
+				attrs(key, value, target){
+					if(key === 'data-text') {
+						const doc = target.querySelector('[data-text]')
+						if(doc) {
+							doc.textContent = value
+						} else {
+							target.textContent = value
+						}
+					}
+				},
+			})
+
+			initComponent({
+				name: 'images',
+				attrs(key, value, target, wrapper){
+					if(key === 'data-images') {
+						const list = value.split(',')
+						const children = []
+						list.forEach(item=>{
+							const img = document.createElement('img')
+							img.setAttribute('src', item)
+							children.push(img)
+						})
+
+						target.replaceChildren(...children)
+					}
+				}
+			})
+
+			initComponents()
+			loadPage()
+		}
+
+		let slotDataInit = {}
+		let initedSlots = new Map()
+
+		function collectSlot(elTarget){
+			const clone = elTarget.cloneNode(true)
+			const slotContent = clone.children
+			if(slotContent.length) {
+				if(initedSlots.get(elTarget)) return
+				initedSlots.set(elTarget, slotContent)
+			}
+		}
+
+		function insertSlot(elTarget){
+			let slotTarget = elTarget.querySelector('[data-slot]')
+			if(!slotTarget) return
+			const slotContent = initedSlots.get(elTarget)
+			slotContent && slotTarget.replaceChildren(...slotContent)
+		}
+
+		export function initComponents() {
+			const empties = document.querySelectorAll('[data-component]');
+			console.log([...empties].filter(item=>!item.getAttribute('data-init')));
+
+			[...empties].forEach(async elTarget=>{
+				if(elTarget.getAttribute('data-init')) {
+					return
+				}
+
+				const componentName = elTarget.getAttribute('data-component')
+				const { innerHtml: component, script } = await getComponent(componentName)
+				const elTargetAttributes = [].filter.call(elTarget.attributes, at => /^data-/.test(at.name));
+				
+				collectSlot(elTarget)
+
+				const inner = getInner(component)
+
+				if(componentName==='layout') {
+					console.log('layout')
+					console.log(elTarget)
+					console.log(component)
+					console.log(inner)
+				}
+
+
+				if(inner.length) {	
+					elTarget.replaceChildren(component)
+
+					const name = elTarget.getAttribute('data-component')
+					let attrsFunc = null
+					if(definedComponentsAttrs[name]){
+						attrsFunc = definedComponentsAttrs[name]
+					}	
+
+					setupComponent({ node: elTarget, attrs: attrsFunc, name })
+
+					const components = []
+					for (const item of inner) {
+						if(item.getAttribute('data-init')) return 
+
+						const name = item.getAttribute('data-component')
+						const params = {
+							name,
+							node: item,
+						}
+						if(definedComponentsAttrs[name]){
+							params.attrs = definedComponentsAttrs[name]
+						}	
+
+						const dataAttrs = [].filter.call(item.attributes, at => /^data-/.test(at.name));
+						params.dataAttrs = dataAttrs
+
+
+						elTargetAttributes.forEach((item)=>{
+							const current = dataAttrs.find(at=>at.name === item.name)
+							if(current) {
+								if(current.value === item.name) {
+									current.value = item.value	
+								}
+							}
+						})
+
+						await setupComponent(params)
+					
+					}
+				
+
+					//const div = createElement('div')
+					//elTarget.replaceChildren(component)
+				} else {
+					const result = await setupComponent({
+						name: componentName,
+						node: script ? component : elTarget,
+						attrs: definedComponentsAttrs[componentName],
+
+						dataAttrs: elTargetAttributes
+					})
+
+					if(result[Symbol.iterator]) {
+						elTarget.replaceChildren(...result)
+					} else {
+						elTarget.replaceChildren(result)
+					}
+				}
+
+				insertSlot(elTarget)
+
+				if(script) loadjs(script.textContent)
+
+			})
+
+		}
+
+		async function getPage(componentName){
+			let path = `../pages/${componentName}.html`
+			let template = null
+
+			if(fetchedPages[path]) {
+				template = fetchedPages[path]
+			}
+
+			if(!template) {
+				template = await fetch(path)
+					.then(res=>res.text()).then((res)=>res)
+				const noResponse = template.includes('Not Found');
+				if(!noResponse && template) {
+				 	fetchedPages[path] = template
+				} 
+				if(noResponse) {
+					template = null
+				}
+				fetchedPages[path] = template
+			}
+
+			return template
+		}
+
+
+		async function fetchComponent(componentName, pages="pages"){
+			let path = `../${pages}/${componentName}.html`
+			let template = null
+
+			if(fetchedPages[path]) {
+				template = fetchedPages[path]
+			}
+
+			if(!template) {
+				template = await fetch(path)
+					.then(res=>res.text()).then((res)=>res)
+				const noResponse = template.includes('Not Found');
+				if(!noResponse && template) {
+				 	fetchedPages[path] = template
+				} 
+				if(noResponse) {
+					template = null
+				}
+				fetchedPages[path] = template
+			}
+
+			const { innerHtml, script } = getTemplate(template, path)
+
+			return { innerHtml, script }
+		}
+
+
+		const fetchedStyles = {}
+
+		async function loadPage(){
+			const path = location.hash.slice(1)
+			const { innerHtml, script } = await fetchComponent(path)
+			const component = document.querySelector('[data-view]')
+	
+			component.replaceChildren(innerHtml)
+			script && loadjs(script.textContent)
+			initComponents()
+		}		
+
+		window.addEventListener('hashchange',async ()=>{
+			loadPage()
+		})
+
+		function getTemplate(template, path){
+			const componentDoc = template ? 
+				new DOMParser().parseFromString(template, "text/html") : null
+
+			const innerHtml = componentDoc ? 
+				componentDoc.documentElement.querySelector('body > :first-child') :
+				document.createElement('div') 
+
+			const script = componentDoc ? componentDoc.documentElement.querySelector('script') : null
+			const style = componentDoc ? componentDoc.documentElement.querySelector('style') : null
+
+			loadStyle(script, style, path)
+
+
+			return { innerHtml, script }
+		}
+
+		function loadStyle(script, style, path){
+
+			if(fetchedStyles[path]) return	
+			if(style) {
+				const insertStyle = document.createElement('style')
+				insertStyle.textContent = style.textContent
+				console.log(insertStyle.innerHtml)
+				document.head.appendChild(insertStyle)
+				fetchedStyles[path] = true
+			}
+		}
+
+
+		async function getComponent(componentName){
+
+			let path = `../components/${componentName}.html`
+			let template = null
+
+			if(fetchedComponents[path]) {
+				template = fetchedComponents[path]
+			}
+
+			if(!template) {
+				template = await fetch(path)
+					.then(res=>res.text()).then((res)=>res)
+
+				const noResponse = template.includes('Not Found');
+				if(!noResponse && template) {
+				 	fetchedComponents[path] = template
+				} 
+
+				if(noResponse) {
+					template = null
+				}
+
+				fetchedComponents[path] = template
+
+			}
+
+
+			return getTemplate(template, path)
+		}
+
+
+		function hasDataAttrs(node) {
+			return [].filter.call(node.attributes, at => /^data-/.test(at.name)).length;
+		}
+
+		async function setupComponent({
+			name,
+			attrs,
+			node,
+			dataAttrs
+		}){
+			let embedScript
+			if(!node) {
+				const { innerHtml, script } = await getComponent(name)
+				node = innerHtml
+				embedScript = script
+			}
+
+			if(node.getAttribute('data-init')) { 
+				return node
+			}
+			node.setAttribute('data-init', getUUID())
+
+			const initAttributes = {}
+
+			let initAttrs = dataAttrs || [].filter.call(node.attributes, at => /^data-/.test(at.name));
+			initAttrs.forEach(item=>{
+				initAttributes[item.name] = {
+					target: node,
+					value: item.value
+				}
+			})
+
+
+			if(!definedComponentsAttrs[name] && attrs) {
+				definedComponentsAttrs[name] = attrs
+			} 
+
+			if(!attrs) {
+				attrs = definedComponentsAttrs[name]
+			}
+
+			if(!attrs) return node
+
+			Object.keys(initAttributes).forEach(key=>{
+				const { value, target } = initAttributes[key]
+				if(!target) return
+
+				attrs(key, value, target, node)
+			})
+
+			let observer = new MutationObserver(mutationRecords => {
+			  	for (const mutation of mutationRecords) {
+				    if (mutation.type === "attributes") {
+				    	if(!mutation.attributeName.includes('data')) return 
+				    	const value = mutation.target.attributes[mutation.attributeName].value
+				    	attrs(mutation.attributeName, value, mutation.target, node)
+				      	//console.log(`The ${mutation.attributeName} attribute was modified.`);
+				    }
+				 }
+			});
+
+			observer.observe(node, {
+				attributeOldValue: true,
+			  	attributes: true
+			});
+
+			return node
+		}
+
+
+		export async function initComponent({
+			name,
+			attrs,
+			node,
+		}, setup=false){
+
+			if(attrs && !definedComponentsAttrs[name]) {
+				definedComponentsAttrs[name] = attrs
+			}
+
+			if(setup) {
+				setupComponent({
+					name,
+					attrs,
+					node
+				})
+			}
+
+		}
+		const scriptsLoaded = new Set()
+		function loadjs (script) {
+			if(scriptsLoaded.has(script)) return
+			scriptsLoaded.add(script)
+		  var js = document.createElement("script");
+		  js.setAttribute('type', 'module')
+		  js.textContent = script;
+
+		  document.head.appendChild(js);
+		}
+
+
+

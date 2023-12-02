@@ -1,32 +1,161 @@
 
-
+import { getUUID } from './utils.js'
 
 		const definedComponentsAttrs = {}
 		const fetchedComponents = {}
 		const fetchedPages = {}
-
-
-		// let observer = new MutationObserver(mutationRecords => {
-		// 	for (const mutation of mutationRecords) {
-		// 		if (mutation.type === "childList") {
-		// 			for(let index = 0; index < mutation.addedNodes.length; index++) {
-		// 				const node = mutation.addedNodes[index]
-		// 				if(node.name !== '#text' && node.getAttribute) {
-			
-		// 				}	
-		// 			}
-		// 	   	}
-		// 	}
-		// });
-
-		// observer.observe(document.body, {
-		//   	childList: true, 
-		//   	subtree: true, 
-		// });
+		const initedSlots = new Map()
 
 
 		function getInner(node){
 			return [...node.querySelectorAll('[data-component]')]
+		}
+
+		function hasDataAttrs(node) {
+			return [].filter.call(node.attributes, at => /^data-/.test(at.name)).length;
+		}
+
+		function checkParent(element, currentName){
+			if(!element.parentElement) return
+			const parentName = element.parentElement.getAttribute(`data-component`)
+			if(parentName) return parentName === currentName
+			return checkParent(element.parentElement,currentName)
+		}
+
+		const slotGet = (element)=>{
+			return initedSlots.get(element.getAttribute('data-init'))
+		}
+
+		const slotSet = (element, value)=>{
+			initedSlots.set(element.getAttribute('data-init'), value)
+		}
+		function collectSlot(elTarget){
+			const clone = elTarget.cloneNode(true)
+			const slotContent = clone.children
+
+			if(slotContent.length) {
+				if(slotGet(elTarget)) return
+				slotSet(elTarget, slotContent)
+			}
+		}
+
+		function insertSlot(elTarget){
+			const slots = elTarget.querySelectorAll('[data-slot]');
+			const name = elTarget.getAttribute('data-component')
+			let slotTarget 
+			[...slots].forEach(item=>{
+				if(checkParent(item, elTarget.getAttribute('data-component'))){
+					slotTarget = item
+				}
+			})
+
+			if(!slotTarget) return
+			if(slotTarget.children.length) return
+
+			const slotContent = slotGet(elTarget)
+			if(!slotContent) return
+
+			if(slotContent.length) {
+				[...slotContent].forEach((item)=>{
+					slotContent && slotTarget.replaceChildren(item.cloneNode(true))
+				})
+			} else {
+				slotContent && slotTarget.replaceChildren(slotContent.cloneNode(true))
+			} 
+		}
+
+		const componentsTemplates = {}
+
+		async function loopDataComponents(callback, target){
+			const wrapper = target ? target : document
+			const empties = wrapper.querySelectorAll('[data-component]');
+			for(const element of empties){
+				await callback(element)
+			}
+			
+		}
+		export async function parsePage(target=null){
+			await loopDataComponents(async element=>{
+				element.setAttribute('data-init', getUUID())
+				const name = element.getAttribute('data-component')
+
+				collectSlot(element)
+
+				if(componentsTemplates[name]) return
+				const { innerHtml: component, script } = await getComponent(name)
+				componentsTemplates[name] = {
+					template: component,
+					script
+				}
+				if(component.querySelectorAll('[data-component]').length){
+					await parsePage(component)
+				}
+			}, target)
+		}
+
+
+		export async function insertTemplates(target=null, parentName=null){
+			await loopDataComponents(async element=>{
+				const name = element.getAttribute('data-component')
+				if(!componentsTemplates[name]) return
+
+				if(parentName === name) return
+				const { template, script } = componentsTemplates[name]
+
+				const clone = template.cloneNode(true)
+
+				element.replaceChildren(clone)
+				if(script) loadjs(script.textContent)
+				if(template.querySelectorAll('[data-component]').length){
+					await insertTemplates(clone, name)
+				}
+			}, target)
+		}
+
+
+		export async function setupComponents() {
+			await loopDataComponents(async element=>{
+				const name = element.getAttribute('data-component')
+				insertSlot(element)
+
+				setupComponent({
+					name, node: element
+				})
+
+			})
+		}
+
+		export async function runApp(components){
+			await parsePage();
+			await insertTemplates();
+
+			initDomApp(components)
+			await setupComponents();
+
+			window.addEventListener('hashchange',async ()=>{
+				loadPage()
+			})
+		}
+
+		async function loadPage(){
+			const path = location.hash.slice(1)
+			const { innerHtml, script } = await getComponent(path, 'pages')
+			const component = document.querySelector('[data-view]')
+			if(!innerHtml || !component) return
+			await parsePage(innerHtml);
+			await insertTemplates(innerHtml)
+	
+			component.replaceChildren(innerHtml)
+			if(script) {
+				await loadjs(script.textContent)
+
+			}
+			await setupComponents(innerHtml)
+
+		}	
+
+		export function initComponents(){
+			return setupComponents()
 		}
 
 
@@ -95,166 +224,13 @@
 				}
 			})
 
-			initComponents()
+			//initComponents()
 			loadPage()
 		}
 
-		let slotDataInit = null
-		export function initComponents() {
-			const empties = document.querySelectorAll('[data-component]');
-			console.log([...empties].filter(item=>!item.getAttribute('data-init')));
-
-			[...empties].forEach(async elTarget=>{
-				if(elTarget.getAttribute('data-init')) return
-
-				const componentName = elTarget.getAttribute('data-component')
-				const { innerHtml: component, script } = await getComponent(componentName)
-				const elTargetAttributes = [].filter.call(elTarget.attributes, at => /^data-/.test(at.name));
-
-				const slot = component.querySelector('[data-slot]')
-				// if(slot) {
-				// 	if(elTarget.innerHtml) {
-				// 		slot.replaceChildren(...elTarget.children)
-				// 	} else {
-				// 		slot.textContent = elTarget.textContent
-				// 	}
-				// }
-
-				const inner = getInner(component)
-
-				if(inner.length) {	
-					elTarget.replaceChildren(component)
-
-					const name = elTarget.getAttribute('data-component')
-					let attrsFunc = null
-					if(definedComponentsAttrs[name]){
-						attrsFunc = definedComponentsAttrs[name]
-					}	
-					setupComponent({ node: elTarget, attrs: attrsFunc, name })
-
-
-					const components = []
-					for (const item of inner) {
-						if(item.getAttribute('data-init')) return 
-
-						const name = item.getAttribute('data-component')
-						const params = {
-							name,
-							node: item,
-						}
-						if(definedComponentsAttrs[name]){
-							params.attrs = definedComponentsAttrs[name]
-						}	
-
-						const dataAttrs = [].filter.call(item.attributes, at => /^data-/.test(at.name));
-						params.dataAttrs = dataAttrs
-
-
-						elTargetAttributes.forEach((item)=>{
-							const current = dataAttrs.find(at=>at.name === item.name)
-							if(current) {
-								if(current.value === item.name) {
-									current.value = item.value	
-								}
-							}
-						})
-
-						await setupComponent(params)
-					
-					}
-				
-
-					//const div = createElement('div')
-					//elTarget.replaceChildren(component)
-				} else {
-					const result = await setupComponent({
-						name: componentName,
-						node: script ? component : elTarget,
-						attrs: definedComponentsAttrs[componentName],
-
-						dataAttrs: elTargetAttributes
-					})
-
-					if(result[Symbol.iterator]) {
-						elTarget.replaceChildren(...result)
-					} else {
-						elTarget.replaceChildren(result)
-					}
-				}
-
-				if(script) loadjs(script.textContent)
-
-			})
-
-		}
-
-		async function getPage(componentName){
-			let path = `../pages/${componentName}.html`
-			let template = null
-
-			if(fetchedPages[path]) {
-				template = fetchedPages[path]
-			}
-
-			if(!template) {
-				template = await fetch(path)
-					.then(res=>res.text()).then((res)=>res)
-				const noResponse = template.includes('Not Found');
-				if(!noResponse && template) {
-				 	fetchedPages[path] = template
-				} 
-				if(noResponse) {
-					template = null
-				}
-				fetchedPages[path] = template
-			}
-
-			return template
-		}
-
-
-		async function fetchComponent(componentName, pages="pages"){
-			let path = `../${pages}/${componentName}.html`
-			let template = null
-
-			if(fetchedPages[path]) {
-				template = fetchedPages[path]
-			}
-
-			if(!template) {
-				template = await fetch(path)
-					.then(res=>res.text()).then((res)=>res)
-				const noResponse = template.includes('Not Found');
-				if(!noResponse && template) {
-				 	fetchedPages[path] = template
-				} 
-				if(noResponse) {
-					template = null
-				}
-				fetchedPages[path] = template
-			}
-
-			const { innerHtml, script } = getTemplate(template, path)
-
-			return { innerHtml, script }
-		}
 
 
 		const fetchedStyles = {}
-
-		async function loadPage(){
-			const path = location.hash.slice(1)
-			const { innerHtml, script } = await fetchComponent(path)
-			const component = document.querySelector('[data-view]')
-	
-			component.replaceChildren(innerHtml)
-			script && loadjs(script.textContent)
-			initComponents()
-		}		
-
-		window.addEventListener('hashchange',async ()=>{
-			loadPage()
-		})
 
 
 		function getTemplate(template, path){
@@ -268,18 +244,13 @@
 			const script = componentDoc ? componentDoc.documentElement.querySelector('script') : null
 			const style = componentDoc ? componentDoc.documentElement.querySelector('style') : null
 
-			loadStyleAndScript(script, style, path)
+			loadStyle(script, style, path)
 
 
 			return { innerHtml, script }
 		}
 
-		function loadStyleAndScript(script, style, path){
-			// const inserScript = document.createElement('script')
-			// inserScript.innerHtml = script.textContent
-			// console.log(inserScript.innerHtml)
-			// document.body.appendChild(inserScript)
-			//script && eval(script.textContent)
+		function loadStyle(script, style, path){
 
 			if(fetchedStyles[path]) return	
 			if(style) {
@@ -292,9 +263,8 @@
 		}
 
 
-		async function getComponent(componentName){
-
-			let path = `../components/${componentName}.html`
+		async function getComponent(componentName, folder='components'){
+			let path = `../${folder}/${componentName}.html`
 			let template = null
 
 			if(fetchedComponents[path]) {
@@ -323,29 +293,21 @@
 		}
 
 
-		function hasDataAttrs(node) {
-			return [].filter.call(node.attributes, at => /^data-/.test(at.name)).length;
-		}
 
-		async function setupComponent({
+
+		function setupComponent({
 			name,
 			attrs,
 			node,
-			dataAttrs
 		}){
-			let embedScript
-			if(!node) {
-				const { innerHtml, script } = await getComponent(name)
-				node = innerHtml
-				embedScript = script
-			}
-
-			if(node.getAttribute('data-init')) return node
-			node.setAttribute('data-init', true)
+			// if(node.getAttribute('data-init')) { 
+			// 	return node
+			// }
+			//node.setAttribute('data-init', getUUID())
 
 			const initAttributes = {}
 
-			let initAttrs = dataAttrs || [].filter.call(node.attributes, at => /^data-/.test(at.name));
+			let initAttrs = [].filter.call(node.attributes, at => /^data-/.test(at.name));
 			initAttrs.forEach(item=>{
 				initAttributes[item.name] = {
 					target: node,
@@ -411,6 +373,8 @@
 
 		}
 		const scriptsLoaded = new Set()
+
+
 		function loadjs (script) {
 			if(scriptsLoaded.has(script)) return
 			scriptsLoaded.add(script)
