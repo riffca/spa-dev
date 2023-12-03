@@ -112,7 +112,6 @@ function getDataAttr(element, attr='data-init') {
 
 
 export async function insertTemplates(target=null, parentName=null){
-	const scripts = []
 	await loopDataComponents(async element=>{
 		const name = element.getAttribute('data-component')
 		if(!componentsTemplates[name]) return
@@ -129,16 +128,9 @@ export async function insertTemplates(target=null, parentName=null){
 		}
 		if(script) { 
 			loadjs(script.textContent, getDataAttr(element))
-			// scripts.push(()=>{
-			// 	const id = getDataAttr(element)
-			// 	if(document.querySelector(`script[data-init=${CSS.escape(id)}`)) return
-			// 	loadjs(script.textContent, id)
-			// } )
 		}
 
 	}, target)
-
-	return scripts
 }
 
 
@@ -174,14 +166,12 @@ async function loadPage(){
 	await parsePage(innerHtml);
 	component.replaceChildren(innerHtml)
 
-	const scripts = await insertTemplates(innerHtml)
+	await insertTemplates(innerHtml)
 
 	if(script) {
 		await loadjs(script.textContent, getDataAttr(innerHtml))
 	}
-	//scripts.forEach(load=>{
-		//setTimeout(()=>load(),5000)
-	//})
+
 
 	await setupComponents(innerHtml)
 

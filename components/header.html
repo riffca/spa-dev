@@ -8,6 +8,8 @@
 		<input class="text-gray-500" data-header-input placeholder="search" />
 	</label>
 
+	<div data-component="images" data-images="1,2"></div>
+
 	<div class="flex items-center gap-[24px]">
 		<div data-profile-name></div>
 		<button data-component="button"><div>Log out</div></button>
@@ -20,6 +22,7 @@
 		const InterHeader = $spa.bindElement(`[data-init=${CSS.escape(document.currentScript.id)}]`,{
 			loaded: false,
 			profile: null,
+			todos: [],
 			text: null,
 			async loadProfile(){
 				const response = await Promise.resolve([{name: 'one'}])
@@ -28,7 +31,9 @@
 			},
 
 			async getDrinks(){
-				const url = 'https://the-cocktail-db.p.rapidapi.com/filter.php?i=Gin';
+				const url = 'https://jsonplaceholder.typicode.com/photos';
+					
+
 				const options = {
 					method: 'GET',
 					headers: {
@@ -39,8 +44,9 @@
 
 				try {
 					const response = await fetch(url, options);
-					const result = await response.text();
+					const result = await response.json();
 					console.log(result);
+					InterHeader.todos = result
 				} catch (error) {
 					console.error(error);
 				}
@@ -58,6 +64,10 @@
 				if(prop === 'text') {
 					const div = target.querySelector('button')
 					div.hidden = false
+				}
+				if(prop === 'todos') {
+					const div = target.querySelector('[data-component=images]')
+					div.setAttribute('data-images',value.map(item=>item.url))
 				}
 			}
 
