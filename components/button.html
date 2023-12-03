@@ -2,3 +2,40 @@
 	<div data-text></div>
 	<div data-slot></div>
 </div>
+<script>
+		const uuid = document.currentScript.id
+
+		const InterButton = $spa.bindElement(`[data-init=${CSS.escape(uuid)}]`,{
+			text: null,
+			async click(event){
+				console.log(uuid)
+			},
+
+		}, 	
+		{ 
+			update(prop,value) {
+				if(prop === 'text') {
+					const div = InterButton.lib.target.querySelector('button')
+					div.hidden = false
+				}
+			}
+
+		})
+
+		$spa.initComponent({
+			name: 'button',
+			attrs(key, value, target){
+				if(key === 'data-text') {
+					const doc = target.querySelector('[data-text]')
+					if(doc) {
+						doc.textContent = value
+					} else {
+						target.textContent = value
+					}
+				}
+			},
+			node: InterButton.lib.target
+		}, true)
+
+
+</script>

@@ -1,6 +1,6 @@
 import { initDomApp, initComponents, initComponent} from './dom.js'
 import { bindElement, addEventListener } from './interface.js'
-import { getUUID } from './utils.js'
+import { getUUID, checkParentHasAttribute } from './utils.js'
 
 window.$spa = {
 	initDomApp,
@@ -8,7 +8,8 @@ window.$spa = {
 	initComponent,
 	bindElement,
 	addEventListener,
-	getUUID
+	getUUID,
+	checkParentHasAttribute
 }
 
 export function initSpa(prop, value){

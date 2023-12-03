@@ -28,25 +28,6 @@ function hasDataAttrs(node) {
 	return [].filter.call(node.attributes, at => /^data-/.test(at.name)).length;
 }
 
-// let observer = new MutationObserver(mutationRecords => {
-// 	for (const mutation of mutationRecords) {
-// 		if (mutation.type === "childList") {
-// 			for(let index = 0; index < mutation.addedNodes.length; index++) {
-// 				const node = mutation.addedNodes[index]
-// 				if(node.name !== '#text' && node.getAttribute) {
-	
-// 				}	
-// 			}
-// 	   	}
-// 	}
-// });
-
-// observer.observe(document.body, {
-//   	childList: true, 
-//   	subtree: true, 
-// });
-
-
 function checkParent(element, currentName){
 	if(!element.parentElement) return
 	const parentName = element.parentElement.getAttribute(`data-component`)
@@ -104,8 +85,8 @@ async function loopDataComponents(callback, target){
 	for(const element of empties){
 		await callback(element)
 	}
-	
 }
+
 export async function parsePage(target=null){
 	await loopDataComponents(async element=>{
 		element.setAttribute('data-init', getUUID())
@@ -131,6 +112,7 @@ function getDataAttr(element, attr='data-init') {
 
 
 export async function insertTemplates(target=null, parentName=null){
+	const scripts = []
 	await loopDataComponents(async element=>{
 		const name = element.getAttribute('data-component')
 		if(!componentsTemplates[name]) return
@@ -141,11 +123,22 @@ export async function insertTemplates(target=null, parentName=null){
 		const clone = template.cloneNode(true)
 
 		element.replaceChildren(clone)
-		if(script) loadjs(script.textContent, getDataAttr(element))
+
 		if(template.querySelectorAll('[data-component]').length){
 			await insertTemplates(clone, name)
 		}
+		if(script) { 
+			loadjs(script.textContent, getDataAttr(element))
+			// scripts.push(()=>{
+			// 	const id = getDataAttr(element)
+			// 	if(document.querySelector(`script[data-init=${CSS.escape(id)}`)) return
+			// 	loadjs(script.textContent, id)
+			// } )
+		}
+
 	}, target)
+
+	return scripts
 }
 
 
@@ -179,13 +172,17 @@ async function loadPage(){
 	const component = document.querySelector('[data-view]')
 	if(!innerHtml || !component) return
 	await parsePage(innerHtml);
-	await insertTemplates(innerHtml)
-
 	component.replaceChildren(innerHtml)
+
+	const scripts = await insertTemplates(innerHtml)
+
 	if(script) {
 		await loadjs(script.textContent, getDataAttr(innerHtml))
-
 	}
+	//scripts.forEach(load=>{
+		//setTimeout(()=>load(),5000)
+	//})
+
 	await setupComponents(innerHtml)
 
 }	
@@ -228,19 +225,19 @@ export function initDomApp(components){
 		},
 	})
 
-	initComponent({
-		name: 'button',
-		attrs(key, value, target){
-			if(key === 'data-text') {
-				const doc = target.querySelector('[data-text]')
-				if(doc) {
-					doc.textContent = value
-				} else {
-					target.textContent = value
-				}
-			}
-		},
-	})
+	// initComponent({
+	// 	name: 'button',
+	// 	attrs(key, value, target){
+	// 		if(key === 'data-text') {
+	// 			const doc = target.querySelector('[data-text]')
+	// 			if(doc) {
+	// 				doc.textContent = value
+	// 			} else {
+	// 				target.textContent = value
+	// 			}
+	// 		}
+	// 	},
+	// })
 
 	initComponent({
 		name: 'images',
@@ -338,6 +335,7 @@ function setupComponent({
 	// 	return node
 	// }
 	//node.setAttribute('data-init', getUUID())
+	if(!node) return
 
 	const initAttributes = {}
 
@@ -364,7 +362,7 @@ function setupComponent({
 		const { value, target } = initAttributes[key]
 		if(!target) return
 
-		attrs(key, value, target, node)
+		attrs(key, provideValue(value), target, node)
 	})
 
 	let observer = new MutationObserver(mutationRecords => {
@@ -372,7 +370,7 @@ function setupComponent({
 		    if (mutation.type === "attributes") {
 		    	if(!mutation.attributeName.includes('data')) return 
 		    	const value = mutation.target.attributes[mutation.attributeName].value
-		    	attrs(mutation.attributeName, value, mutation.target, node)
+		    	attrs(mutation.attributeName, provideValue(value), mutation.target, node)
 		      	//console.log(`The ${mutation.attributeName} attribute was modified.`);
 		    }
 		 }
@@ -384,6 +382,22 @@ function setupComponent({
 	});
 
 	return node
+}
+
+const checkIsValidJson = (str) => {
+  let parsedJson;
+  try {
+    parsedJson = JSON.parse(str);
+    /** parsed JSON will not be undefined if it is parsed successfully because undefined is not a valid JSON */
+    return parsedJson;
+  } catch (e) {
+    /** returning undefined because null, boolean, string, array or object is a valid JSON whereas undefined is invalid JSON  */
+    return undefined;
+  }
+};
+
+function provideValue(value){
+	return checkIsValidJson(value) || value
 }
 
 

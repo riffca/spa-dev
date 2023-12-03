@@ -1,35 +1,22 @@
 <header class="sticky top-0">
 	<div data-component="logo"></div>
-	<div class="flex gap-2">
-		<a href="#profile">Profile</a>
-		<a href="#lazy">lazy</a>
-	</div>
-	<div>
-		<input class="text-gray-500" data-header-input />
-	</div>
+	<div data-slot></div>
 
-	<div data-component="button">
-		 <div>Ass</div>
-	</div>
+	<div data-component="navigation"></div>
+	<label class="flex gap-4 items-center">
+		<span>search</span>
+		<input class="text-gray-500" data-header-input placeholder="search" />
+	</label>
 
-	<div class="header-auth">
+	<div class="flex items-center gap-[24px]">
+		<div data-profile-name></div>
 		<button data-component="button"><div>Log out</div></button>
 		<button data-component="button" data-get-list><div>Get list</div></button>
 	</div>
-
-	<div data-slot></div>
 </header>
 
 
 <script>
-	function checkTargetParent(element, attributeName){
-		if(element.hasAttribute(attributeName)) return true
-	    if(!element.parentElement) return false
-	    const hasAttribute = element.parentElement.hasAttribute(attributeName)
-	    if(hasAttribute) return true
-	    return checkTargetParent(element.parentElement,attributeName)
-	}
-
 		const InterHeader = $spa.bindElement(`[data-init=${CSS.escape(document.currentScript.id)}]`,{
 			loaded: false,
 			profile: null,
@@ -60,16 +47,16 @@
 
 			},
 			async click(event){
-				if(checkTargetParent(event.target,'data-get-list')){
+				if($spa.checkParentHasAttribute(event.target,'data-get-list')){
 					InterHeader.getDrinks()
 				}
 			},
 
 		}, 	
 		{ 
-			update(prop,value) {
+			update(prop, value, target) {
 				if(prop === 'text') {
-					const div = InterHeader.lib.target.querySelector('button')
+					const div = target.querySelector('button')
 					div.hidden = false
 				}
 			}
@@ -77,13 +64,16 @@
 		})
 
 		InterHeader.text = 10
+		InterHeader.profile = { name: 'New Guy' }
 
 		$spa.initComponent({
 			name: 'header',
 			attrs: (key, value, target)=>{
 				if(key === 'data-text') {
-					console.log(value)
 					target.querySelector('input').value = value
+				}
+				if(key === 'data-profile') {
+					target.querySelector('[data-profile-name]').textContent = value.name
 				}
 			},
 			node: InterHeader.lib.target

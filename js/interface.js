@@ -1,13 +1,19 @@
 const listeners = new Map()
 
 export function addEventListener(target, event, handler){
+	if(!target) return
 	target.addEventListener(event, handler)
 	listeners.set(handler, target)
 }
 
-export function bindElement(selector, extend, options){
+export function bindElement(selector, extend, options) {
+	const wrap = bindProxy(selector, extend, options)
+	return wrap
+}
 
+export function bindProxy(selector, extend, options){
 	const { init, update } = options ? options : {}
+
 	const app = {
 		lib: {
 			target: typeof selector === 'string' ?  document.querySelector(selector) : selector,
@@ -44,15 +50,12 @@ export function bindElement(selector, extend, options){
 			app.lib.setAttribute(prop, value)
 		}
 
-		update && update(prop, value)
+		update && update(prop, value,app.lib.target)
 		return true
 		//return Reflect.set(target, prop, value, receiver)
 
 	  }
 	});
-
-
-
 
 	return wrap
 }
