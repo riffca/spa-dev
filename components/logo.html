@@ -1,3 +1,41 @@
 <div>
-	<div>Logo</div>
-<div>
+	Logo blaaa
+	<div data-slot></div>
+</div>
+
+<script>
+const componentId = document.currentScript.id
+
+const component = $spa.initCustomElement({
+	name: 'logo',
+	componentId,
+	attrs: ['icon','text'],
+	change(target, attrName, value){
+		if(attrName === 'icon'){
+ 			const div = document.createElement('div')
+			div.textContent = value
+			target.appendChild(div)
+		}
+	}
+})
+
+const InterLogo = $spa.bindCustomComponent(component,{
+	text: null,
+	async click(event){
+		console.log('Click', componentId)
+	},
+	update(prop,value) {
+		if(prop === 'text') {
+			const div = InterLogo.lib.target.querySelector('button')
+			div.hidden = false
+		}
+	}
+
+})
+
+
+setTimeout(()=>{
+	InterLogo.icon = componentId
+	//component.setAttribute('icon', 'black')
+},2000)
+</script>

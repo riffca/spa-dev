@@ -3,12 +3,13 @@
 	<div data-slot></div>
 </div>
 <script>
-		const uuid = document.currentScript.id
+		const selector = $spa.getScriptSelector()
+		const id = document.currentScript.id
 
-		const InterButton = $spa.bindElement(`[data-init=${CSS.escape(uuid)}]`,{
+		const InterButton = $spa.bindElement(selector,{
 			text: null,
 			async click(event){
-				console.log(uuid)
+				console.log('Click', id)
 			},
 
 		}, 	
@@ -36,6 +37,4 @@
 			},
 			node: InterButton.lib.target
 		}, true)
-
-
 </script>

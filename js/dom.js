@@ -5,9 +5,63 @@ const definedComponentsAttrs = {}
 const fetchedComponents = {}
 const fetchedPages = {}
 const initedSlots = new Map()
-
 const scriptsLoaded = new Set()
 
+function getCustomComponents(target){
+	const outer = target || document.body
+	return outer.querySelectorAll(":not(p,div,span,a,h1,h2,script, header, input,label,button, img, amino-inspect)")
+}
+
+async function loopCustomComponents(cb,target=null){
+	const components = getCustomComponents(target)
+	for(const component of components) {
+		if(component.tagName.includes('APP')) {
+			await cb(component)
+		}
+	}
+}
+
+// async function loadCustomComponent(){
+// 	const path = location.hash.slice(1)
+// 	const { innerHtml, script } = await getComponent(path, 'pages')
+// 	const component = document.querySelector('[data-view]')
+// 	if(!innerHtml || !component) return
+// 	await parsePage(innerHtml);
+
+// 	await insertTemplates(innerHtml)
+// 	if(script) {
+// 		await loadjs(script.textContent, getDataAttr(innerHtml))
+// 	}
+
+// 	await setupComponents(innerHtml)
+
+// }
+
+async function initCustomComponents(target=null){
+	loopCustomComponents(async (component)=>{
+		const path = component.tagName.split('-').slice(1).join('-')
+		const name = path.toLowerCase()
+		const { innerHtml, script } = await getComponent(name)
+		const componentId = getUUID()
+		if(!getDataAttr(component)) {
+			component.setAttribute('data-init', componentId)
+		}
+
+		innerHtml.setAttribute('id', 'template-app-' + name)
+		innerHtml.hidden = true
+
+		if(innerHtml) {
+			document.body.appendChild(innerHtml)
+		}
+
+		if(script) { 
+			script.setAttribute('id', componentId)
+			loadjs(script.textContent, componentId)
+		}
+
+		insertSlot(component)
+	}, target)
+}
 
 function loadjs(script, id) {
 	//if(scriptsLoaded.has(script)) return
@@ -152,6 +206,7 @@ export async function runApp(components){
 
 	initDomApp(components)
 	await setupComponents();
+	await initCustomComponents()
 
 	window.addEventListener('hashchange',async ()=>{
 		loadPage()
@@ -167,14 +222,13 @@ async function loadPage(){
 	component.replaceChildren(innerHtml)
 
 	await insertTemplates(innerHtml)
-
 	if(script) {
 		await loadjs(script.textContent, getDataAttr(innerHtml))
 	}
 
-
 	await setupComponents(innerHtml)
 
+	await initCustomComponents(innerHtml)
 }	
 
 export function initComponents(){
@@ -277,7 +331,6 @@ function loadStyle(style, path){
 	if(style) {
 		const insertStyle = document.createElement('style')
 		insertStyle.textContent = style.textContent
-		console.log(insertStyle.innerHtml)
 		document.head.appendChild(insertStyle)
 		fetchedStyles[path] = true
 	}
@@ -295,7 +348,6 @@ async function getComponent(componentName, folder='components'){
 	if(!template) {
 		template = await fetch(path)
 			.then(res=>res.text()).then((res)=>res)
-
 		const noResponse = template.includes('Not Found');
 		if(!noResponse && template) {
 		 	fetchedComponents[path] = template

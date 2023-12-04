@@ -1,5 +1,6 @@
 <header class="sticky top-0">
-	<div data-component="logo"></div>
+	<app-logo><div>Keys</div></app-logo>
+	<app-logo><div>Dree</div></app-logo>
 	<div data-slot></div>
 
 	<div data-component="navigation"></div>
@@ -19,7 +20,8 @@
 
 
 <script>
-		const InterHeader = $spa.bindElement(`[data-init=${CSS.escape(document.currentScript.id)}]`,{
+
+		const InterHeader = $spa.bindElement($spa.getScriptSelector(),{
 			loaded: false,
 			profile: null,
 			todos: [],

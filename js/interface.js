@@ -1,4 +1,7 @@
 const listeners = new Map()
+const definedComponents = {}
+const definedSlots = {}
+
 
 export function addEventListener(target, event, handler){
 	if(!target) return
@@ -11,14 +14,85 @@ export function bindElement(selector, extend, options) {
 	return wrap
 }
 
-export function bindProxy(selector, extend, options){
+function getTargetComponent(id){
+	return document.querySelector(`[data-init=${CSS.escape(id)}]`)
+}
+
+export function initCustomElement({
+	name,
+	change,
+	componentId,
+	attrs=[],
+}){
+	const componentName = "app-"+name
+
+	if(definedComponents[componentName]) {
+		return getTargetComponent(componentId)
+	}
+
+	definedComponents[componentName] = true 
+
+	customElements.define(
+  		componentName,
+	  class extends HTMLElement {
+	  	constructor(){
+	  		super()
+	  		this.componentId = this.getAttribute('data-init') 
+	    	definedSlots[this.componentId] = this.cloneNode(true)
+	  	}
+	    render(attrName) {
+
+	      let template = document.getElementById("template-" + componentName);
+	      const html = template.cloneNode(true)
+	      html.setAttribute('id', '')
+	      html.hidden = false
+
+	      change && change(html, attrName, this.getAttribute(attrName))
+
+	      	if(definedSlots[componentId]) {
+	     		const slot = html.querySelector('[data-slot]')
+	     		if(slot) {
+	     			slot.replaceChildren(...definedSlots[this.componentId].cloneNode(true).children)
+	     		}
+
+	      	}
+	      	this.replaceChildren(html);
+
+	    }
+	     connectedCallback() { 
+		    if (!this.rendered) {
+		      this.render();
+		      this.rendered = true;
+		    }
+		  }
+
+		  static get observedAttributes() {
+		    return attrs;
+		  }
+
+		  attributeChangedCallback(name, oldValue, newValue) {
+		    this.render(name);
+		  }
+	  },
+	);
+
+	const element = getTargetComponent(componentId)
+	return element
+
+}
+export function bindCustomComponent(selector, extend, options) {
+	return bindProxy(selector, extend, options, false)
+}
+
+export function bindProxy(selector, extend, options, hasDataPrefix=true){
 	const { init, update } = options ? options : {}
 
 	const app = {
 		lib: {
 			target: typeof selector === 'string' ?  document.querySelector(selector) : selector,
 			setAttribute(attr, val){
-				this.target.setAttribute('data-'+ attr, val)
+				const prefix = hasDataPrefix ? 'data-' : ''
+				this.target.setAttribute(prefix+ attr, val)
 			}
 		},
 		...extend
@@ -43,7 +117,6 @@ export function bindProxy(selector, extend, options){
 	  },
 	  set(target, prop, value) {
 		target[prop] = value
-
 		if(typeof value === 'object') {
 			app.lib.setAttribute(prop, JSON.stringify(value))
 		} else {
