@@ -1,6 +1,6 @@
 
 import { initCustomComponents } from './dom.js'
-import { checkIsValidJson } from './utils.js'
+import { checkIsValidJson, checkParent } from './utils.js'
 
 
 const listeners = new Map()
@@ -63,8 +63,11 @@ export function initCustomElement({
 				attrs.forEach(attr=>{
 					if(this.getAttribute(attr)) {
 						change(this, attr, this.getAttribute(attr))
+						updateTemplates(this, { [attr]: this.getAttribute(attr) })
 					}
 				})
+
+
 
 				initCustomComponents(this)
 
@@ -89,6 +92,8 @@ export function initCustomElement({
 
 			attributeChangedCallback(name, oldValue, newValue) {
 				this.listen(name, newValue)
+
+				updateTemplates(this, { [name]: newValue })
 			}
 		},
 	);
@@ -102,22 +107,20 @@ export function bindCustomComponent(selector, extend, options) {
 	return bindProxy(selector, extend, options, false)
 }
 
-export function bindProxy(selector, extend, options, hasDataPrefix = true) {
+export function bindProxy(selector, extend, options) {
 
+	const { init } = extend
+
+	const currentElement = typeof selector === 'string' ? document.querySelector(selector) : selector
 	const {
-		init,
-		update
-	} = options ? options : {}
+		update,
+		} = options ? options : {}
 
 	const app = {
 		lib: {
-			target: ()=> typeof selector === 'string' ? document.querySelector(selector) : selector,
+			target: currentElement,
 			setAttribute(attr, val) {
-
-				//console.log(selector)
-				//console.log(this.target())
-				const prefix = hasDataPrefix ? 'data-' : ''
-				this.target().setAttribute(prefix + attr, val)
+				this.target.setAttribute(attr, val)
 			}
 		},
 		...extend
@@ -126,10 +129,9 @@ export function bindProxy(selector, extend, options, hasDataPrefix = true) {
 	if(!app.lib.target) return
 
 	if (extend.click) {
-		addEventListener(app.lib.target(), 'click', extend.click)
+		addEventListener(app.lib.target, 'click', extend.click)
 	}
 
-	init && init()
 
 	const wrap = new Proxy(app, {
 		get(target, prop, receiver) {
@@ -139,8 +141,11 @@ export function bindProxy(selector, extend, options, hasDataPrefix = true) {
 					return value.apply(this === receiver ? target : this, args);
 				};
 			}
+
 			return value;
-			// return Reflect.get(target, key).bind(target);
+
+			//return  Reflect.get(...arguments)
+			//return Reflect.get(target, prop).bind(target);
 		},
 		set(target, prop, value) {
 			target[prop] = value
@@ -150,12 +155,32 @@ export function bindProxy(selector, extend, options, hasDataPrefix = true) {
 				app.lib.setAttribute(prop, value)
 			}
 
-			update && update(prop, value, app.lib.target())
+			update && update(prop, value, app.lib.target)
 			return true
 			//return Reflect.set(target, prop, value, receiver)
 
 		}
 	});
 
+	init && init(wrap)
+
 	return wrap
+}
+
+function updateTemplates(target, object){
+	const components = target.querySelectorAll('*');
+	[...components].forEach(comp=>{
+		const content = comp.textContent.slice()
+		const tagName = target.tagName.toLowerCase()
+
+		if(content.match(/{(.*?)}/g)) {
+			if(!checkParent(comp, tagName)) {
+				//if(target.tagName.toLowerCase() === 'app-button') {
+				console.log(123,object.name)
+					comp.textContent = content.template(object)
+				//}
+			}
+			//comp.textContent = content.template({text:1})
+		}
+	})
 }

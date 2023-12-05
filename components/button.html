@@ -1,15 +1,22 @@
 <div class="py-1 px-2 rounded-md border cursor-pointer inline-block">
 	<div data-text></div>
 	<div data-slot></div>
+	<div>{text}</div>
+	<div>{name}</div>
+	<div>{icon}</div>
 </div>
 <script>
 
 const componentId = document.currentScript.id
 
+
+	// for(const property of ["name"]) {
+    // Object.defineProperty(extend.prototype, property, {enumerable: true});
+
 const component = $spa.initCustomElement({
 	name: 'button',
 	componentId,
-	attrs: ['icon','text'],
+	attrs: ['icon','text', 'name'],
 	change(target, prop, value){
 		if(prop === 'text') {
 			const doc = target.querySelector('[data-text]')
@@ -23,11 +30,26 @@ const component = $spa.initCustomElement({
 })
 
 const InterButton = $spa.bindCustomComponent(component,{
-	icon: null,
-	text: "new",
+	getName(){
+		return InterButton.text + '   ' + InterButton.icon
+	},
 	click(event){
 		console.log('Click', componentId)
-	}
+	},
+	// init(wrap){
+	// 	wrap.text = 'huiac'
+	// 	wrap.icon = 'icon'
+	// 	wrap.name = wrap.getName()
+	// }
+})
+
+InterButton.text = 'huiac'
+InterButton.icon = 'icon'
+InterButton.name = InterButton.getName()
+
+
+setTimeout(()=>{
+	InterButton.text = 'true'
 })
 
 

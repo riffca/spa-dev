@@ -48,8 +48,6 @@ export async function initCustomComponents(target=null){
 			document.body.appendChild(innerHtml)
 		}
 
-		console.log(1,name, script)
-
 		if(script) { 
 			script.setAttribute('id', componentId)
 			loadjs(script.textContent, componentId)
