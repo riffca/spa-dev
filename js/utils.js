@@ -2,9 +2,17 @@ export function getUUID(){
     return crypto.getRandomValues(new Uint32Array(4)).join('');
 }
 
-export function checkParent(element, currentName, attributeName){
+export function getInner(node){
+    return [...node.querySelectorAll('[data-component]')]
+}
+
+export function hasDataAttrs(node) {
+    return [].filter.call(node.attributes, at => /^data-/.test(at.name)).length;
+}
+
+export function checkParent(element, currentName){
     if(!element.parentElement) return
-    const parentName = element.parentElement.getAttribute(`data-component`)
+    const parentName = element.parentElement.tagName.toLowerCase()
     if(parentName) return parentName === currentName
     return checkParent(element.parentElement,currentName)
 }
@@ -16,20 +24,62 @@ export function checkParentHasAttribute(element, attributeName){
     return checkParentHasAttribute(element.parentElement,attributeName)
 }
 
-// let observer = new MutationObserver(mutationRecords => {
-//  for (const mutation of mutationRecords) {
-//      if (mutation.type === "childList") {
-//          for(let index = 0; index < mutation.addedNodes.length; index++) {
-//              const node = mutation.addedNodes[index]
-//              if(node.name !== '#text' && node.getAttribute) {
-    
-//              }   
-//          }
-//      }
-//  }
-// });
+export const checkIsValidJson = (str) => {
+  let parsedJson;
+  try {
+    parsedJson = JSON.parse(str);
+    /** parsed JSON will not be undefined if it is parsed successfully because undefined is not a valid JSON */
+    return parsedJson;
+  } catch (e) {
+    /** returning undefined because null, boolean, string, array or object is a valid JSON whereas undefined is invalid JSON  */
+    return str;
+  }
+};
 
-// observer.observe(document.body, {
-//      childList: true, 
-//      subtree: true, 
-// });
+export function getDataAttr(element, attr='data-init') {
+    return element.getAttribute(attr)
+}
+
+
+export function createList({ list, isUl=false, cb }) {
+    const append = []
+    list.forEach(item=>{
+        const div = document.createElement('div')
+        if(cb) {
+            cb(div)
+        } else {
+            div.textContent = item
+        }
+        append.push(div)
+    })
+    const div = document.createElement('div')
+    div.replaceChildren(...list)
+    return div
+}
+
+
+export function insertSlot(elTarget){
+    const slots = elTarget.querySelectorAll('[data-slot]');
+    const name = elTarget.tagName.toLowerCase()
+    let slotTarget = null;
+    [...slots].forEach(item=>{
+        if(checkParent(item, name)){
+            slotTarget = item
+        }
+    })
+
+    if(!slotTarget) return
+    if(slotTarget.children.length) return
+
+    const slotContent = slotGet(elTarget)
+    if(!slotContent) return
+
+    if(slotContent.length) {
+        [...slotContent].forEach((item)=>{
+            slotContent && slotTarget.replaceChildren(item.cloneNode(true))
+        })
+    } else {
+        slotContent && slotTarget.replaceChildren(slotContent.cloneNode(true))
+    } 
+}
+

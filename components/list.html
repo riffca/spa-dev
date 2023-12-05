@@ -1,0 +1,32 @@
+<div></div>
+<script>
+const componentId = document.currentScript.id
+
+const component = $spa.initCustomElement({
+	name: 'list',
+	componentId,
+	attrs: ['list'],
+	change(target, prop, value){
+		if(prop === 'list') {
+			const list = value.split(',')
+			const children = []
+			list.forEach(item=>{
+				const div = document.createElement('div')
+				div.textContent = item
+				children.push(div)
+			})
+
+			target.replaceChildren(...children)
+		}
+	},
+})
+
+const InterImages = $spa.bindCustomComponent(component,{
+	images: null,
+	click(event){
+		console.log('Click list', componentId)
+	}
+})
+
+
+</script>

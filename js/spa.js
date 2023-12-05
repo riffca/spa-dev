@@ -1,12 +1,9 @@
-import { initDomApp, initComponents, initComponent} from './dom.js'
 import { bindElement, addEventListener, initCustomElement, bindCustomComponent } from './interface.js'
-import { getUUID, checkParentHasAttribute } from './utils.js'
+import { getUUID, checkParentHasAttribute, createList } from './utils.js'
+
 
 
 window.$spa = {
-	initDomApp,
-	initComponents,
-	initComponent,
 	bindElement,
 	addEventListener,
 	getUUID,
@@ -31,8 +28,4 @@ window.$spa = {
 		}
 		return CSS.escape(currentId)
 	}
-}
-
-export function initSpa(prop, value){
-	window.$spa[prop] = value
 }

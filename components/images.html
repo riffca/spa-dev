@@ -1,0 +1,32 @@
+<div></div>
+<script>
+const componentId = document.currentScript.id
+
+const component = $spa.initCustomElement({
+	name: 'images',
+	componentId,
+	attrs: ['images'],
+	change(target, prop, value){
+		if(prop === 'images') {
+			const list = value.split(',')
+			const children = []
+			list.forEach(item=>{
+				const img = document.createElement('img')
+				img.setAttribute('src', item)
+				children.push(img)
+			})
+
+			target.replaceChildren(...children)
+		}
+	},
+})
+
+const InterImages = $spa.bindCustomComponent(component,{
+	images: null,
+	click(event){
+		console.log('Click images', componentId)
+	}
+})
+
+
+</script>

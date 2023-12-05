@@ -3,25 +3,44 @@
 	<app-logo><div>Dree</div></app-logo>
 	<div data-slot></div>
 
-	<div data-component="navigation"></div>
+	<app-navigation></app-navigation>
 	<label class="flex gap-4 items-center">
 		<span>search</span>
 		<input class="text-gray-500" data-header-input placeholder="search" />
 	</label>
 
-	<div data-component="images" data-images="1,2"></div>
+	<app-images images="1,2"></app-images>
 
 	<div class="flex items-center gap-[24px]">
 		<div data-profile-name></div>
-		<button data-component="button"><div>Log out</div></button>
-		<button data-component="button" data-get-list><div>Get list</div></button>
+		<app-button><div>Log out</div></app-button>
+		<app-button data-get-list><div>Get list</div></app-button>
 	</div>
 </header>
 
 
 <script>
 
-		const InterHeader = $spa.bindElement($spa.getScriptSelector(),{
+const componentId = document.currentScript.id
+	
+const component = $spa.initCustomElement({
+	name: 'header',
+	componentId,
+	attrs: ['text','images', 'profile', 'loaded'],
+	change(target, prop, value){
+		if(prop === 'text') {
+			target.querySelector('input').value = value
+		}
+		if(prop === 'profile') {
+			target.querySelector('[data-profile-name]').textContent = value.name
+		}
+		if(prop === 'images') {
+			target.querySelector('app-images').setAttribute('images', value)
+		}
+	}
+})
+
+		const InterHeader = $spa.bindCustomComponent(component,{
 			loaded: false,
 			profile: null,
 			todos: [],
@@ -31,11 +50,8 @@
 				InterHeader.loaded = true
 				InterHeader.profile = JSON.stringify(response)
 			},
-
 			async getDrinks(){
 				const url = 'https://jsonplaceholder.typicode.com/photos';
-					
-
 				const options = {
 					method: 'GET',
 					headers: {
@@ -47,8 +63,7 @@
 				try {
 					const response = await fetch(url, options);
 					const result = await response.json();
-					console.log(result);
-					InterHeader.todos = result
+					InterHeader.images = result.map(item=>item.url)
 				} catch (error) {
 					console.error(error);
 				}
@@ -60,42 +75,18 @@
 				}
 			},
 
-		}, 	
-		{ 
-			update(prop, value, target) {
-				if(prop === 'text') {
-					const div = target.querySelector('button')
-					div.hidden = false
-				}
-				if(prop === 'todos') {
-					const div = target.querySelector('[data-component=images]')
-					div.setAttribute('data-images',value.map(item=>item.url))
-				}
-			}
-
 		})
 
 		InterHeader.text = 10
 		InterHeader.profile = { name: 'New Guy' }
 
-		$spa.initComponent({
-			name: 'header',
-			attrs: (key, value, target)=>{
-				if(key === 'data-text') {
-					target.querySelector('input').value = value
-				}
-				if(key === 'data-profile') {
-					target.querySelector('[data-profile-name]').textContent = value.name
-				}
-			},
-			node: InterHeader.lib.target
-		}, true)
-
 		setTimeout(()=>{
 			InterHeader.text = '18'
 		},2000)
 
-		const input = InterHeader.lib.target.querySelector(['[data-header-input]'])
+		console.log(1, component)
+
+		const input = component.querySelector(['[data-header-input]'])
 
 		$spa.addEventListener(input, 'input',(event)=>{
 			InterHeader.text = event.target.value

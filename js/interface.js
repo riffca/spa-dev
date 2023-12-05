@@ -1,3 +1,8 @@
+
+import { initCustomComponents } from './dom.js'
+import { checkIsValidJson } from './utils.js'
+
+
 const listeners = new Map()
 const definedComponents = {}
 const definedSlots = {}
@@ -15,7 +20,7 @@ export function bindElement(selector, extend, options) {
 }
 
 function getTargetComponent(id) {
-	return document.querySelector(`[data-init=${CSS.escape(id)}]`)
+	return document.body.querySelector(`[data-init=${CSS.escape(id)}]`)
 }
 
 export function initCustomElement({
@@ -46,7 +51,7 @@ export function initCustomElement({
 				html.setAttribute('id', '')
 				html.hidden = false
 
-				if (definedSlots[componentId]) {
+				if (definedSlots[this.componentId]) {
 					const slot = html.querySelector('[data-slot]')
 					if (slot) {
 						slot.replaceChildren(...definedSlots[this.componentId].cloneNode(true).children)
@@ -55,10 +60,18 @@ export function initCustomElement({
 				}
 				this.replaceChildren(html);
 
+				attrs.forEach(attr=>{
+					if(this.getAttribute(attr)) {
+						change(this, attr, this.getAttribute(attr))
+					}
+				})
+
+				initCustomComponents(this)
+
 			}
 
 			listen(attrName, value) {
-				change && change(this, attrName, value)
+				change && change(this, attrName, checkIsValidJson(value))
 			}
 
 			connectedCallback() {
@@ -90,6 +103,7 @@ export function bindCustomComponent(selector, extend, options) {
 }
 
 export function bindProxy(selector, extend, options, hasDataPrefix = true) {
+
 	const {
 		init,
 		update
@@ -97,17 +111,22 @@ export function bindProxy(selector, extend, options, hasDataPrefix = true) {
 
 	const app = {
 		lib: {
-			target: typeof selector === 'string' ? document.querySelector(selector) : selector,
+			target: ()=> typeof selector === 'string' ? document.querySelector(selector) : selector,
 			setAttribute(attr, val) {
+
+				//console.log(selector)
+				//console.log(this.target())
 				const prefix = hasDataPrefix ? 'data-' : ''
-				this.target.setAttribute(prefix + attr, val)
+				this.target().setAttribute(prefix + attr, val)
 			}
 		},
 		...extend
 	}
 
+	if(!app.lib.target) return
+
 	if (extend.click) {
-		addEventListener(app.lib.target, 'click', extend.click)
+		addEventListener(app.lib.target(), 'click', extend.click)
 	}
 
 	init && init()
@@ -131,7 +150,7 @@ export function bindProxy(selector, extend, options, hasDataPrefix = true) {
 				app.lib.setAttribute(prop, value)
 			}
 
-			update && update(prop, value, app.lib.target)
+			update && update(prop, value, app.lib.target())
 			return true
 			//return Reflect.set(target, prop, value, receiver)
 

@@ -4,14 +4,16 @@
 </div>
 
 <script>
+
+
 const componentId = document.currentScript.id
+
 
 const component = $spa.initCustomElement({
 	name: 'logo',
 	componentId,
 	attrs: ['icon','text'],
 	change(target, prop, value){
-		console.log(prop)
 		if(prop === 'icon'){
  			const div = document.createElement('div')
 			div.textContent = value
@@ -21,16 +23,15 @@ const component = $spa.initCustomElement({
  			const div = document.createElement('div')
 			div.textContent = value
 			target.appendChild(div)
-			console.log(target, value)
 		}
-	}
+	},
 })
 
 const InterLogo = $spa.bindCustomComponent(component,{
 	text: null,
 	icon: null,
 	async click(event){
-		console.log('Click', componentId)
+		console.log('Click logo', componentId)
 	},
 })
 

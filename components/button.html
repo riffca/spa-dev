@@ -3,38 +3,32 @@
 	<div data-slot></div>
 </div>
 <script>
-		const selector = $spa.getScriptSelector()
-		const id = document.currentScript.id
 
-		const InterButton = $spa.bindElement(selector,{
-			text: null,
-			async click(event){
-				console.log('Click', id)
-			},
+const componentId = document.currentScript.id
 
-		}, 	
-		{ 
-			update(prop,value) {
-				if(prop === 'text') {
-					const div = InterButton.lib.target.querySelector('button')
-					div.hidden = false
-				}
+const component = $spa.initCustomElement({
+	name: 'button',
+	componentId,
+	attrs: ['icon','text'],
+	change(target, prop, value){
+		if(prop === 'text') {
+			const doc = target.querySelector('[data-text]')
+			if(doc) {
+				doc.textContent = value
+			} else {
+				target.textContent = value
 			}
+		}
+	},
+})
 
-		})
+const InterButton = $spa.bindCustomComponent(component,{
+	icon: null,
+	text: "new",
+	click(event){
+		console.log('Click', componentId)
+	}
+})
 
-		$spa.initComponent({
-			name: 'button',
-			attrs(key, value, target){
-				if(key === 'data-text') {
-					const doc = target.querySelector('[data-text]')
-					if(doc) {
-						doc.textContent = value
-					} else {
-						target.textContent = value
-					}
-				}
-			},
-			node: InterButton.lib.target
-		}, true)
+
 </script>

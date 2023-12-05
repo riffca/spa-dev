@@ -2,3 +2,19 @@
 	<a href="#profile">Profile</a>
 	<a href="#lazy">lazy</a>
 </div>
+<script>
+	
+const componentId = document.currentScript.id
+
+const component = $spa.initCustomElement({
+	name: 'navigation',
+	componentId,
+})
+
+const InterLogo = $spa.bindCustomComponent(component,{
+	async click(event){
+		console.log('Click navigation', componentId)
+	},
+})
+
+</script>
