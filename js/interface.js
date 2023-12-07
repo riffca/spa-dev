@@ -236,11 +236,9 @@ function updateHidden(target, object) {
 	const components = target.querySelectorAll('[data-show]');
 	[...components].forEach(comp=>{
 		const key = comp.getAttribute('data-show').toLowerCase()
-		console.log(123,target.getAttribute(key))
-		console.log(comp)
-		console.log(object)
 		if(target.hasAttribute(key)) {
-			comp.hidden = target.getAttribute(key)
+			const truthy = target.getAttribute(key) === 'true'
+			comp.hidden = truthy
 		}
 	})
 }
