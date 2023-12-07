@@ -1,32 +1,17 @@
 <div class="py-1 px-2 rounded-md border cursor-pointer inline-block">
-	<div data-text></div>
-	<div data-slot></div>
 	<div>{text}</div>
+	<div data-slot></div>
 	<div>{name}</div>
-	<div>{icon}</div>
+	<div data-show="skipedIcon">{icon}</div> 
 </div>
 <script>
 
 const componentId = document.currentScript.id
 
-
-	// for(const property of ["name"]) {
-    // Object.defineProperty(extend.prototype, property, {enumerable: true});
-
 const component = $spa.initCustomElement({
 	name: 'button',
 	componentId,
-	attrs: ['icon','text', 'name'],
-	change(target, prop, value){
-		if(prop === 'text') {
-			const doc = target.querySelector('[data-text]')
-			if(doc) {
-				doc.textContent = value
-			} else {
-				target.textContent = value
-			}
-		}
-	},
+	attrs: ['icon','text', 'name', 'skipedicon'],
 })
 
 const InterButton = $spa.bindCustomComponent(component,{
@@ -36,21 +21,19 @@ const InterButton = $spa.bindCustomComponent(component,{
 	click(event){
 		console.log('Click', componentId)
 	},
-	// init(wrap){
-	// 	wrap.text = 'huiac'
-	// 	wrap.icon = 'icon'
-	// 	wrap.name = wrap.getName()
-	// }
+	init(proxy){
+		proxy.text = 'huiac'
+		proxy.icon = 'icon'
+		proxy.name = 1
+		proxy.skipedIcon = true
+	}
 })
-
-InterButton.text = 'huiac'
-InterButton.icon = 'icon'
-InterButton.name = InterButton.getName()
 
 
 setTimeout(()=>{
-	InterButton.text = 'true'
-})
+	InterButton.text = 'qwe'
+	InterButton.name = InterButton.getName()
+	InterButton.skipedIcon = true
 
-
+},3000)
 </script>

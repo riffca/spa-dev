@@ -6,6 +6,7 @@ import { checkIsValidJson, checkParent } from './utils.js'
 const listeners = new Map()
 const definedComponents = {}
 const definedSlots = {}
+const definedCopmonentsIds = {}
 
 
 export function addEventListener(target, event, handler) {
@@ -42,32 +43,40 @@ export function initCustomElement({
 		class extends HTMLElement {
 			constructor() {
 				super()
-				this.componentId = this.getAttribute('data-init')
 			}
-
 			setupHtml() {
 				let template = document.getElementById("template-" + componentName);
 				const html = template.cloneNode(true)
 				html.setAttribute('id', '')
 				html.hidden = false
 
-				if (definedSlots[this.componentId]) {
-					const slot = html.querySelector('[data-slot]')
-					if (slot) {
-						slot.replaceChildren(...definedSlots[this.componentId].cloneNode(true).children)
-					}
-
+				const slot = html.querySelector('[data-slot]')
+				if (slot && this.slotTemplate) {
+					const slotClone = this.slotTemplate.cloneNode(true)
+					const children = slotClone.querySelectorAll('*');
+					[...children].forEach(item=>{
+						item.setAttribute('data-in-slot', this.componentId)
+					})
+					slot.replaceChildren(...slotClone.children)
 				}
+
+				const children = html.querySelectorAll('*');
+				const self = this;
+
+				[...children].forEach(item=>{
+					html.setAttribute('data-parent', this.componentId)
+					item.setAttribute('data-parent', this.componentId)
+				})
+
 				this.replaceChildren(html);
 
 				attrs.forEach(attr=>{
 					if(this.getAttribute(attr)) {
-						change(this, attr, this.getAttribute(attr))
+						change && change(this, attr, this.getAttribute(attr))
 						updateTemplates(this, { [attr]: this.getAttribute(attr) })
+						updateHidden(this, { [attr]: this.getAttribute(attr) })
 					}
 				})
-
-
 
 				initCustomComponents(this)
 
@@ -78,27 +87,43 @@ export function initCustomElement({
 			}
 
 			connectedCallback() {
-				if (!this.rendered) {
-					definedSlots[this.componentId] = this.cloneNode(true)
+				// if (!this.rendered) {
+				// 	this.rendered = true;
 
-					this.setupHtml()
-					this.rendered = true;
-				}
+				// 	if(this.hasAttribute('data-init')) {
+				// 		this.componentId = this.getAttribute('data-init')
+				// 	}
+				// }
 			}
 
 			static get observedAttributes() {
-				return attrs;
+				return [...attrs, 'data-init'];
 			}
 
-			attributeChangedCallback(name, oldValue, newValue) {
-				this.listen(name, newValue)
+			async attributeChangedCallback(name, oldValue, newValue) {
+				if(name === 'data-init') {
+					if(this.inited) return 
+					this.componentId = this.getAttribute('data-init')
+					if(this.children.length) {
+						const slotTemplate = document.createElement('div')
+						slotTemplate.replaceChildren(...this.children)
+						this.slotTemplate = slotTemplate.cloneNode(true)	
+					}
+					this.setupHtml()
+					this.inited = true
+				}
+				if(this.hasAttribute('data-init')) {
+					this.listen(name, newValue)
+					updateTemplates(this, { [name]: newValue })
+					updateHidden(this, { [name]: newValue })
+				}
 
-				updateTemplates(this, { [name]: newValue })
 			}
 		},
 	);
 
 	const element = getTargetComponent(componentId)
+
 	return element
 
 }
@@ -107,9 +132,14 @@ export function bindCustomComponent(selector, extend, options) {
 	return bindProxy(selector, extend, options, false)
 }
 
-export function bindProxy(selector, extend, options) {
+export function bindProxy(selector, extender, options) {
 
-	const { init } = extend
+	if(typeof extender === 'function') {
+		var { init, ...extend } = extender(extender)
+	} else {
+		var { init, ...extend }= extender
+	}
+
 
 	const currentElement = typeof selector === 'string' ? document.querySelector(selector) : selector
 	const {
@@ -149,6 +179,7 @@ export function bindProxy(selector, extend, options) {
 		},
 		set(target, prop, value) {
 			target[prop] = value
+
 			if (typeof value === 'object') {
 				app.lib.setAttribute(prop, JSON.stringify(value))
 			} else {
@@ -167,20 +198,49 @@ export function bindProxy(selector, extend, options) {
 	return wrap
 }
 
+
 function updateTemplates(target, object){
 	const components = target.querySelectorAll('*');
 	[...components].forEach(comp=>{
-		const content = comp.textContent.slice()
-		const tagName = target.tagName.toLowerCase()
+		const textContent = comp.textContent.slice()
+		const childNodes = comp.childNodes;
+		for (let i = 0; i < childNodes.length; i++) {
+		const currentNode = childNodes[i]
+		  if (currentNode.nodeType == 1) {
+		  	if(target.getAttribute('data-init') !== currentNode.getAttribute('data-parent')) return
+		  	const renderText = currentNode.getAttribute('data-render')
+		  	if(renderText) {
+		  		Object.keys(object).forEach(key=>{
+		  			if(renderText.includes(key)) {
+		  				currentNode.textContent = renderText.template(object)
+		  			}
+		  		})
+		  	}
+		  } else if (currentNode.nodeType == 3) {
+		  	const value = currentNode.textContent.slice()
+		  	if(value.match(/{(.*?)}/g)) {
+		  		const parent = currentNode.parentElement
+				if(target.getAttribute('data-init') === parent.getAttribute('data-parent')) {
+		  			if(!parent.hasAttribute('data-render')) {
+		  				parent.setAttribute('data-render', parent.textContent.slice())
+		  			}
+		  			parent.textContent = value.template(object)
+				}	
+		  	}
+		  }
+		}	
+	})
+}
 
-		if(content.match(/{(.*?)}/g)) {
-			if(!checkParent(comp, tagName)) {
-				//if(target.tagName.toLowerCase() === 'app-button') {
-				console.log(123,object.name)
-					comp.textContent = content.template(object)
-				//}
-			}
-			//comp.textContent = content.template({text:1})
+function updateHidden(target, object) {
+	const components = target.querySelectorAll('[data-show]');
+	[...components].forEach(comp=>{
+		const key = comp.getAttribute('data-show').toLowerCase()
+		console.log(123,target.getAttribute(key))
+		console.log(comp)
+		console.log(object)
+		if(target.hasAttribute(key)) {
+			comp.hidden = target.getAttribute(key)
 		}
 	})
 }

@@ -33,6 +33,10 @@ const InterLogo = $spa.bindCustomComponent(component,{
 	async click(event){
 		console.log('Click logo', componentId)
 	},
+	init(proxy){
+		proxy.text = '2'
+		proxy.icon = '3'
+	}
 })
 
 setTimeout(()=>{

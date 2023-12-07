@@ -56,11 +56,13 @@ export async function initCustomComponents(target=null){
 }
 
 function loadjs(script, id) {
+	if(!id) return
 	//if(scriptsLoaded.has(script)) return
 	scriptsLoaded.add(script)
   var js = document.createElement("script");
   js.setAttribute('id', id)
-  js.textContent = `{${script}}`;
+  js.textContent = `{ ${script} }`;
+  //js.textContent = `{ try{ ${script} } catch(err) { console.log(err) }`;
 
   document.head.appendChild(js);
 }

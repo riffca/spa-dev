@@ -11,10 +11,14 @@ export function hasDataAttrs(node) {
 }
 
 export function checkParent(element, currentName){
-    if(!element.parentElement) return
+    const rootName = currentName.toLowerCase()
+    if(!element.parentElement) return false
     const parentName = element.parentElement.tagName.toLowerCase()
-    if(parentName) return parentName === currentName
-    return checkParent(element.parentElement,currentName)
+    if(parentName !== rootName) {
+        return checkParent(element.parentElement, rootName)
+    }  else {
+        return true
+    }
 }
 export function checkParentHasAttribute(element, attributeName){
     if(element.hasAttribute(attributeName)) return true
