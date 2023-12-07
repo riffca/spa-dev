@@ -1,6 +1,14 @@
 <div class="flex gap-2">
 	<a href="#profile">Profile</a>
 	<a href="#lazy">lazy</a>
+	<div data-list="helloList">
+		<div>
+			<div>{hello.name}</div>
+			<div>
+				{hello.done}
+			</div>
+		</div>
+	</div>
 </div>
 <script>
 	
@@ -9,12 +17,26 @@ const componentId = document.currentScript.id
 const component = $spa.initCustomElement({
 	name: 'navigation',
 	componentId,
+	attrs: ['hellolist']
 })
 
 const InterLogo = $spa.bindCustomComponent(component,{
 	async click(event){
 		console.log('Click navigation', componentId)
 	},
+	init(proxy){
+		proxy.helloList = [{
+		 'hello': { name: 'tru', done: 'better' }
+		}]
+	}
 })
 
+
+setTimeout(()=>{
+			InterLogo.helloList = [{
+			'hello': { name: 'tru', done: 'great' },
+		}, {
+			'hello': { name: 'filll'} ,
+		}]
+		},2000)
 </script>

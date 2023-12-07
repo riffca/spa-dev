@@ -16,6 +16,8 @@
 		<app-button><div>Log out</div></app-button>
 		<app-button data-get-list><div>Get list</div></app-button>
 	</div>
+
+	<!-- <div data-list="list"></div> -->
 </header>
 
 
@@ -26,7 +28,7 @@ const componentId = document.currentScript.id
 const component = $spa.initCustomElement({
 	name: 'header',
 	componentId,
-	attrs: ['text','images', 'profile', 'loaded'],
+	attrs: ['text','images', 'profile', 'loaded', 'list'],
 	change(target, prop, value){
 		if(prop === 'text') {
 			target.querySelector('input').value = value
@@ -79,7 +81,7 @@ const component = $spa.initCustomElement({
 
 		InterHeader.text = 10
 		InterHeader.profile = { name: 'New Guy' }
-
+		InterHeader.list = [1,2,3,4]
 		setTimeout(()=>{
 			InterHeader.text = '18'
 		},2000)

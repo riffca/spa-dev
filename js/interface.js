@@ -43,6 +43,7 @@ export function initCustomElement({
 		class extends HTMLElement {
 			constructor() {
 				super()
+				this.listTemplates = {}
 			}
 			setupHtml() {
 				let template = document.getElementById("template-" + componentName);
@@ -60,21 +61,22 @@ export function initCustomElement({
 					slot.replaceChildren(...slotClone.children)
 				}
 
-				const children = html.querySelectorAll('*');
-				const self = this;
 
+				const children = html.querySelectorAll('*');
 				[...children].forEach(item=>{
 					html.setAttribute('data-parent', this.componentId)
 					item.setAttribute('data-parent', this.componentId)
 				})
 
+
 				this.replaceChildren(html);
 
 				attrs.forEach(attr=>{
 					if(this.getAttribute(attr)) {
-						change && change(this, attr, this.getAttribute(attr))
-						updateTemplates(this, { [attr]: this.getAttribute(attr) })
-						updateHidden(this, { [attr]: this.getAttribute(attr) })
+						this.listen(attr, this.getAttribute(attr))
+						setupLists(this, this.getJSON(attr))
+						updateTemplates(this, this.getJSON(attr))
+						updateHidden(this, this.getJSON(attr))
 					}
 				})
 
@@ -84,6 +86,10 @@ export function initCustomElement({
 
 			listen(attrName, value) {
 				change && change(this, attrName, checkIsValidJson(value))
+			}
+
+			getJSON(key, value){
+				return getJSON(key, value, this)
 			}
 
 			connectedCallback() {
@@ -104,19 +110,34 @@ export function initCustomElement({
 				if(name === 'data-init') {
 					if(this.inited) return 
 					this.componentId = this.getAttribute('data-init')
-					if(this.children.length) {
-						const slotTemplate = document.createElement('div')
-						slotTemplate.replaceChildren(...this.children)
-						this.slotTemplate = slotTemplate.cloneNode(true)	
-					}
+					this.initSlots()
 					this.setupHtml()
+					this.initLists()
 					this.inited = true
 				}
 				if(this.hasAttribute('data-init')) {
 					this.listen(name, newValue)
-					updateTemplates(this, { [name]: newValue })
-					updateHidden(this, { [name]: newValue })
+					setupLists(this, this.getJSON(name, newValue))
+					updateTemplates(this, this.getJSON(name, newValue))
+					updateHidden(this, this.getJSON(name, newValue))
 				}
+
+			}
+
+			initSlots(){
+				if(this.children.length) {
+					const slotTemplate = document.createElement('div')
+					slotTemplate.replaceChildren(...this.children)
+					this.slotTemplate = slotTemplate.cloneNode(true)	
+				}
+			}
+
+			initLists(){
+				const components = this.querySelectorAll('[data-list]');
+				[...components].forEach(comp=>{
+					const key = comp.getAttribute('data-list').toLowerCase()
+					this.listTemplates[key] = comp.cloneNode(true)
+				})
 
 			}
 		},
@@ -162,7 +183,6 @@ export function bindProxy(selector, extender, options) {
 		addEventListener(app.lib.target, 'click', extend.click)
 	}
 
-
 	const wrap = new Proxy(app, {
 		get(target, prop, receiver) {
 			const value = target[prop];
@@ -201,7 +221,6 @@ export function bindProxy(selector, extender, options) {
 
 function updateTemplates(target, object){
 
-	const stop = false
 	Object.keys(object).forEach(key=>{
 		if(['null', 'undefined'].includes(object[key])){
 			object[key] = ''
@@ -228,8 +247,9 @@ function updateTemplates(target, object){
 		  } else if (currentNode.nodeType == 3) {
 		  	const value = currentNode.textContent.slice()
 		  	if(value.match(/{(.*?)}/g)) {
+		  		if(Object.values(object).some(value=>Array.isArray(value))) return
 		  		const parent = currentNode.parentElement
-				if(target.getAttribute('data-init') === parent.getAttribute('data-parent')) {
+				if(!target.hasAttribute('data-init') || target.getAttribute('data-init') === parent.getAttribute('data-parent')) {
 		  			if(!parent.hasAttribute('data-render')) {
 		  				parent.setAttribute('data-render', parent.textContent.slice())
 		  			}
@@ -238,6 +258,26 @@ function updateTemplates(target, object){
 		  	}
 		  }
 		}	
+	})
+}
+
+function setupLists(target, object) {
+	const components = target.querySelectorAll('[data-list]');
+	[...components].forEach(comp=>{
+		const listKey = comp.getAttribute('data-list').toLowerCase()
+		if(!object[listKey]) return
+		Object.keys(object).forEach(key=>{
+			if(key === listKey) {
+				const list = object[key]
+				const tempWrap = []
+				list.forEach(item=>{
+					const template = target.listTemplates[listKey].cloneNode(true)
+					updateTemplates(template, item)
+					tempWrap.push(template)
+				})
+				comp.replaceChildren(...tempWrap)
+			}
+		})
 	})
 }
 
@@ -250,4 +290,10 @@ function updateHidden(target, object) {
 			comp.hidden = truthy
 		}
 	})
+}
+
+function getJSON(key, value, target){
+	return {
+		[key]: value ? checkIsValidJson(value) : checkIsValidJson(target.getAttribute(key))
+	}
 }
