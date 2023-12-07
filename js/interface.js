@@ -200,6 +200,14 @@ export function bindProxy(selector, extender, options) {
 
 
 function updateTemplates(target, object){
+
+	const stop = false
+	Object.keys(object).forEach(key=>{
+		if(['null', 'undefined'].includes(object[key])){
+			object[key] = ''
+		}
+	})
+
 	const components = target.querySelectorAll('*');
 	[...components].forEach(comp=>{
 		const textContent = comp.textContent.slice()
@@ -212,6 +220,7 @@ function updateTemplates(target, object){
 		  	if(renderText) {
 		  		Object.keys(object).forEach(key=>{
 		  			if(renderText.includes(key)) {
+		  				if(!object[key]) return
 		  				currentNode.textContent = renderText.template(object)
 		  			}
 		  		})

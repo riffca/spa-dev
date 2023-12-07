@@ -22,7 +22,7 @@ const InterButton = $spa.bindCustomComponent(component,{
 		console.log('Click', componentId)
 	},
 	init(proxy){
-		proxy.text = 'huiac'
+		proxy.text = null
 		proxy.icon = 'icon'
 		proxy.name = 1
 		proxy.skipedIcon = true
@@ -34,6 +34,5 @@ setTimeout(()=>{
 	InterButton.text = 'qwe'
 	InterButton.name = InterButton.getName()
 	InterButton.skipedIcon = false
-
 },3000)
 </script>
