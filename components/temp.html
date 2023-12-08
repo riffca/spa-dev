@@ -11,15 +11,19 @@
 	<div>
 		{tag.name}
 	</div>
+	<div>{profile}</div>
 </div>
 <script>
-
 $spa.initCustomElement({
 	name: 'temp',
-	attrs: ['text', 'site', 'map', 'tag'],
+	attrs: ['text', 'site', 'map', 'tag', 'profile'],
 })
 
 const { element, proxy } = $spa.getRoots($componentId)
+
+$spa.bindStore('auth', {
+	profile: 'profile'
+})
 
 // $spa.collectHandlers($componentId, {
 // 	onTextClick,

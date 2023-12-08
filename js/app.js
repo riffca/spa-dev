@@ -1,9 +1,23 @@
 import './spa.js' 
-
+import { createStore } from './store.js'
 import { runApp } from './dom.js'
 
-runApp()
 
+const authStore = createStore('auth')
+    
+
+
+
+async function createApp(){
+    await runApp()
+    authStore.profile = 'well'
+
+    setTimeout(()=>{
+        authStore.profile = 'pleasure'
+    },3000)
+}
+
+createApp()
 
 
 

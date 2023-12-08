@@ -67,6 +67,19 @@ function getScriptString(script, id, componentName){
 	})
   ` : ''
 
+  const storeString = `
+	$spa.bindStore($componentId, proxy, 'auth', {
+		profile: 'profile'
+	})
+  `
+
+  const storeStrIndex = script.indexOf('$spa.bindStore(')
+  if(storeStrIndex !== -1) {
+  	script = script.splice(storeStrIndex, '$spa.bindStore('.length, '$spa.bindStore($componentId, proxy, ')
+  	console.log(componentName,storeStrIndex)
+  }
+
+
   return `{ 
   	const $componentId = '${id}'; 
   	${script} 
@@ -81,21 +94,6 @@ function loadjs(script, id, componentName) {
   var js = document.createElement("script");
   js.setAttribute('id', id)
 
-  // const handlerNames = []
-  // const template = document.body.getElementById('app-'+componentName)
-  // const comps = template.querySelectorAll('[data-click]');
-  // [...comps].forEach(comp=>{
-  // 	handlerNames.push(comp.getAttribute('data-click'))
-  // })
-
-  // js.textContent = `{ 
-  // 	const $componentId = '${id}'; 
-  // 	${script} 
-  // 	$spa.collectHandlers($componentId, {
-// 		${handlerNames.join(',')}
-// 	})
-  // }`;
-  //js.textContent = `{ try{ ${script} } catch(err) { console.log(err) }`;
   js.textContent = getScriptString(script, id, componentName)
   document.head.appendChild(js);
 }
@@ -104,7 +102,7 @@ function loadjs(script, id, componentName) {
 export async function runApp(components){
 	//load layout
 	await initCustomComponents()
-	runPage()
+	await runPage()
 
 	window.addEventListener('hashchange',async ()=>{
 		runPage()

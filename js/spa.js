@@ -1,7 +1,7 @@
 import { bindElement, addEventListener, initCustomElement, bindCustomComponent, definedComponentsProxies, definedCustomComponents, definedHandlers } from './interface.js'
 import { getUUID, checkParentHasAttribute, createList } from './utils.js'
 
-
+import { getStore } from './store.js'
 
 window.$spa = {
 	bindElement,
@@ -52,6 +52,15 @@ window.$spa = {
 		Object.keys(handlers).forEach(key=>{
 			definedHandlers[id][key] = handlers[key]
 		})
+	},
+	bindStore(componentId, proxy, name, object){
+		const store = getStore(name)
+		console.log(store.value)
+		if(!store) return
+		Object.keys(object).forEach(key=>{
+			console.log(store)
+			store.setHandler(componentId, proxy, object[key], key )
+		})
 	}
 }
 
@@ -65,3 +74,8 @@ String.prototype.template = function (d) {
         return o;
     });
 };
+
+String.prototype.splice = function(idx, rem, str) {
+    return this.slice(0, idx) + str + this.slice(idx + Math.abs(rem));
+};
+
