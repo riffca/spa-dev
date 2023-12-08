@@ -27,11 +27,7 @@ export async function initCustomComponents(target=null,folder="components"){
 		const { innerHtml, script } = await getComponent(name, folder)
 
 		let componentId  = getUUID()
-		// if(getDataAttr(component)) {
-		// 	componentId = getDataAttr(component)
-		// } else {
-		// 	componentId = getUUID()
-		// }
+
 		if(getDataAttr(component)) return
 		if(!getDataAttr(component)) {
 			component.setAttribute('data-init', componentId)
@@ -61,7 +57,7 @@ function getScriptString(script, id, componentName){
   if(template) {
   	  const comps = template.querySelectorAll('[data-click]');
 	  [...comps].forEach(comp=>{
-	  	handlerNames.push(comp.getAttribute('data-click'))
+	  	handlerNames.push(comp.dataset.click)
 	  })
   }
 
