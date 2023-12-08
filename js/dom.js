@@ -50,20 +50,57 @@ export async function initCustomComponents(target=null,folder="components"){
 
 		if(script) { 
 			script.setAttribute('id', componentId)
-			loadjs(script.textContent, componentId)
+			loadjs(script.textContent, componentId, name)
 		}
 	}, target)
 }
 
-function loadjs(script, id) {
+function getScriptString(script, id, componentName){
+  const handlerNames = []
+  const template = document.getElementById('template-app-'+componentName)
+  if(template) {
+  	  const comps = template.querySelectorAll('[data-click]');
+	  [...comps].forEach(comp=>{
+	  	handlerNames.push(comp.getAttribute('data-click'))
+	  })
+  }
+
+  const handlersString = handlerNames.length ? `
+  	$spa.collectHandlers($componentId, {
+		${handlerNames.join(',')}
+	})
+  ` : ''
+
+  return `{ 
+  	const $componentId = '${id}'; 
+  	${script} 
+  	${handlersString}
+  }`; 
+}
+
+function loadjs(script, id, componentName) {
 	if(!id) return
 	//if(scriptsLoaded.has(script)) return
 	scriptsLoaded.add(script)
   var js = document.createElement("script");
   js.setAttribute('id', id)
-  js.textContent = `{ ${script} }`;
-  //js.textContent = `{ try{ ${script} } catch(err) { console.log(err) }`;
 
+  // const handlerNames = []
+  // const template = document.body.getElementById('app-'+componentName)
+  // const comps = template.querySelectorAll('[data-click]');
+  // [...comps].forEach(comp=>{
+  // 	handlerNames.push(comp.getAttribute('data-click'))
+  // })
+
+  // js.textContent = `{ 
+  // 	const $componentId = '${id}'; 
+  // 	${script} 
+  // 	$spa.collectHandlers($componentId, {
+// 		${handlerNames.join(',')}
+// 	})
+  // }`;
+  //js.textContent = `{ try{ ${script} } catch(err) { console.log(err) }`;
+  js.textContent = getScriptString(script, id, componentName)
   document.head.appendChild(js);
 }
 
@@ -114,7 +151,6 @@ async function loadPage(){
 
 
 const fetchedStyles = {}
-
 
 function getTemplate(template, path){
 	const componentDoc = template ? 

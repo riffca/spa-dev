@@ -1,0 +1,57 @@
+<div class="flex gap-2">
+	<div data-click="onTextClick">
+		{text}
+	</div>
+	<div data-click="onSiteClick">
+		{site}
+	</div>
+	<div>
+		{map}
+	</div>
+	<div>
+		{tag.name}
+	</div>
+</div>
+<script>
+
+$spa.initCustomElement({
+	name: 'temp',
+	attrs: ['text', 'site', 'map', 'tag'],
+})
+
+const { element, proxy } = $spa.getRoots($componentId)
+
+// $spa.collectHandlers($componentId, {
+// 	onTextClick,
+// 	onSiteClick
+// })
+
+function onTextClick() {
+	proxy.site = '333'
+	proxy.tag = {
+		name: 'fff'
+	}	
+}
+
+function onSiteClick() {
+	proxy.site = '222'
+	proxy.tag = {
+		name: 'qq'
+	}	
+}
+
+proxy.text = '500'
+
+
+setTimeout(()=>{
+	proxy.site = 'new site'
+	proxy.tag = {
+		name: 'value'
+	}
+},3000)
+
+function getMap(){
+	return proxy.text  + $componentId
+}
+
+</script>

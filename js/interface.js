@@ -6,7 +6,9 @@ import { checkIsValidJson, checkParent } from './utils.js'
 const listeners = new Map()
 const definedComponents = {}
 const definedSlots = {}
-const definedCopmonentsIds = {}
+export const definedComponentsProxies = {}
+export const definedCustomComponents = {}
+export const definedHandlers = {}
 
 
 export function addEventListener(target, event, handler) {
@@ -29,7 +31,8 @@ export function initCustomElement({
 	change,
 	componentId,
 	attrs = [],
-	classes
+	classes,
+	proxy
 }) {
 	const componentName = "app-" + name
 
@@ -53,11 +56,13 @@ export function initCustomElement({
 				}
 			}
 			setupHtml() {
+				//get component template
 				let template = document.getElementById("template-" + componentName);
 				const html = template.cloneNode(true)
 				html.setAttribute('id', '')
 				html.hidden = false
 
+				//update slots
 				const slot = html.querySelector('[data-slot]')
 				if (slot && this.slotTemplate) {
 					const slotClone = this.slotTemplate.cloneNode(true)
@@ -68,16 +73,17 @@ export function initCustomElement({
 					slot.replaceChildren(...slotClone.children)
 				}
 
-
+				//add parent ids
 				const children = html.querySelectorAll('*');
 				[...children].forEach(item=>{
 					html.setAttribute('data-parent', this.componentId)
 					item.setAttribute('data-parent', this.componentId)
 				})
 
-
+				//insert defined html
 				this.replaceChildren(html);
 
+				//update temlate with defined attributes
 				attrs.forEach(attr=>{
 					if(this.getAttribute(attr)) {
 						this.listen(attr, this.getAttribute(attr))
@@ -87,6 +93,7 @@ export function initCustomElement({
 					}
 				})
 
+				//find embed uninited components
 				initCustomComponents(this)
 
 			}
@@ -116,11 +123,9 @@ export function initCustomElement({
 			async attributeChangedCallback(name, oldValue, newValue) {
 				if(name === 'data-init') {
 					if(this.inited) return 
-					this.componentId = this.getAttribute('data-init')
-					this.initSlots()
-					this.setupHtml()
-					this.initLists()
 					this.inited = true
+
+					this.onInit()
 				}
 				if(this.hasAttribute('data-init')) {
 					this.listen(name, newValue)
@@ -128,6 +133,26 @@ export function initCustomElement({
 					updateTemplates(this, this.getJSON(name, newValue))
 					updateHidden(this, this.getJSON(name, newValue))
 				}
+
+			}
+
+			clickHandler(event){
+				runHandler(this.componentId, event)
+			}
+
+			onInit(){
+				this.componentId = this.getAttribute('data-init')
+				this.initSlots()
+				this.setupHtml()
+				this.initLists()
+				this.initProxy()
+				definedCustomComponents[this.componentId] = this
+
+				setTimeout(()=>{
+					if(definedHandlers[this.componentId]) {
+						addEventListener(this, 'click', this.clickHandler)	
+					}
+				})
 
 			}
 
@@ -147,6 +172,10 @@ export function initCustomElement({
 				})
 
 			}
+			initProxy(){
+				this.proxy = bindProxy(this, {})
+				definedComponentsProxies[this.componentId] = this.proxy
+			}
 		},
 	);
 
@@ -157,11 +186,10 @@ export function initCustomElement({
 }
 
 export function bindCustomComponent(selector, extend, options) {
-	return bindProxy(selector, extend, options, false)
+	return bindProxy(selector, extend, options)
 }
 
 export function bindProxy(selector, extender, options) {
-
 	if(typeof extender === 'function') {
 		var { init, ...extend } = extender(extender)
 	} else {
@@ -316,6 +344,23 @@ function updateAttrsTemplates(component, object) {
 
 		}
 	})
+}
+
+function runHandlers(target) {
+	const components = target.querySelectorAll('*');
+	const componentId = target.dataset.init;
+	[...components].forEach(component=>{
+		if(component.dataset.click) {
+			definedHandlers[componentId][component.dataset.click]()
+		}
+	})
+}
+
+function runHandler(componentId, event) {
+	const component = event.target
+	if(component.dataset.click) {
+		definedHandlers[componentId][component.dataset.click]()
+	}
 }
 
 function getJSON(key, value, target){

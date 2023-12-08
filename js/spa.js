@@ -1,4 +1,4 @@
-import { bindElement, addEventListener, initCustomElement, bindCustomComponent } from './interface.js'
+import { bindElement, addEventListener, initCustomElement, bindCustomComponent, definedComponentsProxies, definedCustomComponents, definedHandlers } from './interface.js'
 import { getUUID, checkParentHasAttribute, createList } from './utils.js'
 
 
@@ -27,6 +27,31 @@ window.$spa = {
 			currentId = id
 		}
 		return CSS.escape(currentId)
+	},
+	getComponentProxy(id){
+		return definedComponentsProxies[id]
+	},
+	getCustomElement(id){
+		return definedCustomComponents[id]
+	},
+	getRoots(id, options){
+		const element = this.getCustomElement(id)
+		options?.click && this.addEventListener(element, 'click',(event)=>{
+			options.click(event)
+		})
+		return {
+			element,
+			proxy: this.getComponentProxy(id)
+		}
+	},
+	collectHandlers(id, handlers){
+		if(!id) return
+		if(!definedHandlers[id]) {
+			definedHandlers[id] = {}
+		}
+		Object.keys(handlers).forEach(key=>{
+			definedHandlers[id][key] = handlers[key]
+		})
 	}
 }
 
