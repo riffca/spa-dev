@@ -85,7 +85,6 @@ async function runPage(){
 	const viewContainer = document.querySelector('[data-view]')
 
 	const pageName = 'app-page-'+path
-	//viewContainer.innerHtml = `<${pageName}></${pageName}>`
 	if(definedPages[pageName]) {
 		viewContainer.replaceChildren(definedPages[pageName])
 		return
@@ -110,17 +109,7 @@ async function loadPage(){
 	}
 
 	await initCustomComponents(viewContainer)
-
 }	
-
-export function initComponents(){
-	return setupComponents()
-}
-
-
-export function initDomApp(components){
-	loadPage()
-}
 
 
 
