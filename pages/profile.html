@@ -9,14 +9,31 @@
 </div>
 <script>
 
-	// $spa.initComponent({
-	// 	name: 'see',
-	// 	attrs:(key, value, target)=>{
-	// 		target.textContent = value
-	// 	}
-	// })
+const componentId = document.currentScript.id
 
-	// const veryLarge = 1
+const component = $spa.initCustomElement({
+	name: 'page-profile',
+	componentId,
+	attrs: ['text'],
+})
+
+
+const vm = $spa.bindCustomComponent(component,{
+	getName(){
+		return vm.text + '   ' + vm.icon
+	},
+	click(event){
+		console.log('Click', componentId)
+	},
+	init(proxy){
+		proxy.text = null
+	}
+})
+
+
+setTimeout(()=>{
+	vm.text = 'new texxt'
+},3000)
 
 </script>
 <style>

@@ -20,11 +20,11 @@ async function loopCustomComponents(cb,target=null){
 }
 
 
-export async function initCustomComponents(target=null){
+export async function initCustomComponents(target=null,folder="components"){
 	await loopCustomComponents(async (component)=>{
 		const path = component.tagName.split('-').slice(1).join('-')
 		const name = path.toLowerCase()
-		const { innerHtml, script } = await getComponent(name)
+		const { innerHtml, script } = await getComponent(name, folder)
 
 		let componentId  = getUUID()
 		// if(getDataAttr(component)) {
@@ -71,12 +71,32 @@ function loadjs(script, id) {
 export async function runApp(components){
 	//load layout
 	await initCustomComponents()
-	loadPage()
+	runPage()
 
 	window.addEventListener('hashchange',async ()=>{
-		loadPage()
+		runPage()
 	})
 }
+
+const definedPages = {}
+
+async function runPage(){
+	const path = location.hash.slice(1)
+	const viewContainer = document.querySelector('[data-view]')
+
+	const pageName = 'app-page-'+path
+	//viewContainer.innerHtml = `<${pageName}></${pageName}>`
+	if(definedPages[pageName]) {
+		viewContainer.replaceChildren(definedPages[pageName])
+		return
+	}
+
+	const page = document.createElement(pageName)
+	viewContainer.replaceChildren(page)
+	await initCustomComponents(viewContainer, 'pages')
+	definedPages[pageName] = page
+
+}	
 
 async function loadPage(){
 	const path = location.hash.slice(1)
@@ -136,6 +156,10 @@ function loadStyle(style, path){
 
 
 async function getComponent(componentName, folder='components'){
+	if(componentName.includes('page')) {
+		componentName = componentName.split('-')[1]
+	}
+
 	let path = `../${folder}/${componentName}.html`
 	let template = null
 

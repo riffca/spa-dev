@@ -1,6 +1,6 @@
 
 <div class="griid">
-	<div>Heeew</div>
+	<div>{text}</div>
 	<div data-component="button" text="Hello" list="Gopa, Hui">Ghbdtn</div>
 
 	<div data-component="button" text="Hello" list="SYkanskii,1233,324, Hui">Ghbdtn</div>
@@ -37,3 +37,22 @@
 	background: blue;
 }
 </style>
+
+<script>
+const componentId = document.currentScript.id
+
+const component = $spa.initCustomElement({
+	name: 'page-lazy',
+	componentId,
+	attrs: ['text'],
+})
+
+const vw = $spa.bindCustomComponent(component,{
+	click(event){
+		console.log('Click', componentId)
+	},
+	init(proxy){
+		proxy.text = 'Lazy route'
+	}
+})
+</script>

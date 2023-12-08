@@ -29,6 +29,7 @@ export function initCustomElement({
 	change,
 	componentId,
 	attrs = [],
+	classes
 }) {
 	const componentName = "app-" + name
 
@@ -44,6 +45,12 @@ export function initCustomElement({
 			constructor() {
 				super()
 				this.listTemplates = {}
+				this.classList.add(classes)
+				if(componentName.includes('page')) {
+					this.classList.add('h-full')
+					this.classList.add('block') 
+					this.classList.add('[&>div]:h-full')
+				}
 			}
 			setupHtml() {
 				let template = document.getElementById("template-" + componentName);
@@ -272,7 +279,12 @@ function setupLists(target, object) {
 				const tempWrap = []
 				list.forEach(item=>{
 					const template = target.listTemplates[listKey].cloneNode(true)
-					updateTemplates(template, item)
+					updateTemplates(template, item);
+
+					[...template.children].forEach(child=>{
+						updateAttrsTemplates(child, item)
+					})
+
 					tempWrap.push(template)
 				})
 				comp.replaceChildren(...tempWrap)
@@ -288,6 +300,20 @@ function updateHidden(target, object) {
 		if(target.hasAttribute(key)) {
 			const truthy = target.getAttribute(key) === 'true'
 			comp.hidden = truthy
+		}
+	})
+}
+
+function updateAttrsTemplates(component, object) {
+	Object.keys(object).forEach(prop=>{
+		if(component.dataset) {
+			const dataset = {...component.dataset }
+			Object.keys(dataset).forEach(key=>{ 
+				if(dataset[key] === prop) {
+					component.setAttribute(key, `{${dataset[key]}}`.template(object))
+				}
+			})
+
 		}
 	})
 }
