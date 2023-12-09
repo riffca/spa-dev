@@ -1,5 +1,5 @@
 <div class="flex gap-4">
-	<img class="w-16" src="https://robohash.org/YOUR-TEXT.png">
+	<img class="w-16" data-src="profileImage">
 	<div >
 		<div class="text-xl p-2 cursor-pointer" data-click="onProfileClick">
 			{profileName}
@@ -12,7 +12,7 @@
 
 $spa.initCustomElement({
 	name: 'profile',
-	attrs: ['profile-name', 'role'],
+	attrs: ['profile-name', 'role', 'profile-image'],
 })
 
 const { element, proxy } = $spa.getRoots($componentId)
@@ -20,6 +20,8 @@ const { element, proxy } = $spa.getRoots($componentId)
 const store = $spa.bindStore('auth', {
 	profileName: 'profile'
 })
+
+proxy.profileImage = `https://robohash.org/${Math.random()}.png`
 
 function onProfileClick(){
    proxy.role = 'administrator'

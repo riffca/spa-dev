@@ -36,9 +36,9 @@ window.$spa = {
 	},
 	getRoots(id, options){
 		const element = this.getCustomElement(id)
-		options?.click && this.addEventListener(element, 'click',(event)=>{
-			options.click(event)
-		})
+		// options?.click && this.addEventListener(element, 'click',(event)=>{
+		// 	options.click(event)
+		// })
 		return {
 			element,
 			proxy: this.getComponentProxy(id)

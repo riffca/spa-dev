@@ -1,4 +1,4 @@
-<div class="flex gap-2">
+<div class="flex gap-2 items-center">
 	<div data-click="onTextClick">
 		{text}
 	</div>
@@ -9,7 +9,7 @@
 	<div>
 		{mapClass}
 	</div>
-	<div data-class="mapclass">
+	<div data-class="mapClass">
 		{map}
 	</div>
 	<div>
@@ -40,7 +40,7 @@ function onTextClick() {
 		name: 'fff'
 	}
 
-	proxy.mapClass = 'bg-gray-400'	
+	proxy.mapClass = 'bg-gray-400 p-4'	
 }
 
 function onSiteClick() {
@@ -51,6 +51,7 @@ function onSiteClick() {
 }
 
 proxy.text = '500'
+proxy.map = '400'
 
 
 setTimeout(()=>{

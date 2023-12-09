@@ -129,6 +129,7 @@ export function initCustomElement({
 				}
 				if(this.hasAttribute('data-init')) {
 					this.listen(name, newValue)
+					updateDatasetAttrs(this, this.getJSON(name, newValue))
 					setupLists(this, this.getJSON(name, newValue))
 					updateTemplates(this, this.getJSON(name, newValue))
 					updateHidden(this, this.getJSON(name, newValue))
@@ -341,6 +342,15 @@ function updateHidden(target, object) {
 	})
 }
 
+function updateDatasetAttrs(component, object) {
+	interateBySelector(component, '[data-class]', (element)=>{
+		updateAttrsTemplates(element, object) 
+	})
+	interateBySelector(component, '[data-src]', (element)=>{
+		updateAttrsTemplates(element, object) 
+	})
+}
+
 function updateAttrsTemplates(component, object) {
 	Object.keys(object).forEach(prop=>{
 		if(component.dataset) {
@@ -350,8 +360,14 @@ function updateAttrsTemplates(component, object) {
 					component.setAttribute(key, `{${dataset[key]}}`.template(object))
 				}
 			})
-
 		}
+	})
+}
+
+function interateBySelector(component, selector, cb){
+	const components = component.querySelectorAll(selector);
+	[...components].forEach(item=>{
+		cb(item)
 	})
 }
 
@@ -368,9 +384,11 @@ function runHandlers(target) {
 function runHandler(componentId, event) {
 	const component = event.target
 	if(component.dataset.click) {
-		definedHandlers[componentId][component.dataset.click]()
+		definedHandlers[componentId][component.dataset.click](event)
 	}
 }
+
+
 const makeCamelCase = str => str.split('-').map((e,i) => i ? e.charAt(0).toUpperCase() + e.slice(1).toLowerCase() : e.toLowerCase()).join('')
 function getJSON(key, value=null, target){
 	const camelCase = makeCamelCase(key)
