@@ -102,7 +102,7 @@ export function initCustomElement({
 				change && change(this, attrName, checkIsValidJson(value))
 			}
 
-			getJSON(key, value){
+			getJSON(key, value=null){
 				return getJSON(key, value, this)
 			}
 
@@ -189,6 +189,12 @@ export function bindCustomComponent(selector, extend, options) {
 	return bindProxy(selector, extend, options)
 }
 
+function kebabize(string) {
+  // uppercase after a non-uppercase or uppercase before non-uppercase
+  const upper = /(?<!\p{Uppercase_Letter})\p{Uppercase_Letter}|\p{Uppercase_Letter}(?!\p{Uppercase_Letter})/gu;
+  return string.replace(upper, "-$&").replace(/^-/, "").toLowerCase();
+}
+
 export function bindProxy(selector, extender, options) {
 	if(typeof extender === 'function') {
 		var { init, ...extend } = extender(extender)
@@ -235,10 +241,12 @@ export function bindProxy(selector, extender, options) {
 		set(target, prop, value) {
 			target[prop] = value
 
+			const attrCase = kebabize(prop)
+
 			if (typeof value === 'object') {
-				app.lib.setAttribute(prop, JSON.stringify(value))
+				app.lib.setAttribute(attrCase, JSON.stringify(value))
 			} else {
-				app.lib.setAttribute(prop, value)
+				app.lib.setAttribute(attrCase, value)
 			}
 
 			update && update(prop, value, app.lib.target)
@@ -324,9 +332,10 @@ function setupLists(target, object) {
 function updateHidden(target, object) {
 	const components = target.querySelectorAll('[data-show]');
 	[...components].forEach(comp=>{
-		const key = comp.getAttribute('data-show').toLowerCase()
-		if(target.hasAttribute(key)) {
-			const truthy = target.getAttribute(key) === 'true'
+		const key = comp.getAttribute('data-show')
+		const kebabCase = kebabize(key)
+		if(target.hasAttribute(kebabCase)) {
+			const truthy = target.getAttribute(kebabCase) === 'true'
 			comp.hidden = truthy
 		}
 	})
@@ -362,9 +371,10 @@ function runHandler(componentId, event) {
 		definedHandlers[componentId][component.dataset.click]()
 	}
 }
-
-function getJSON(key, value, target){
+const makeCamelCase = str => str.split('-').map((e,i) => i ? e.charAt(0).toUpperCase() + e.slice(1).toLowerCase() : e.toLowerCase()).join('')
+function getJSON(key, value=null, target){
+	const camelCase = makeCamelCase(key)
 	return {
-		[key]: value ? checkIsValidJson(value) : checkIsValidJson(target.getAttribute(key))
+		[makeCamelCase(key)]: value ? checkIsValidJson(value) : checkIsValidJson(target.getAttribute(key))
 	}
 }

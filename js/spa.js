@@ -55,12 +55,15 @@ window.$spa = {
 	},
 	bindStore(componentId, proxy, name, object){
 		const store = getStore(name)
-		console.log(store.value)
+		console.log(store)
 		if(!store) return
 		Object.keys(object).forEach(key=>{
-			console.log(store)
 			store.setHandler(componentId, proxy, object[key], key )
 		})
+
+		store.reactValues()
+
+		return store
 	}
 }
 

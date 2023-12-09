@@ -5,15 +5,17 @@ import { runApp } from './dom.js'
 
 const authStore = createStore('auth')
     
-
-
-
+    
 async function createApp(){
     await runApp()
-    authStore.profile = 'well'
 
+    authStore.profile = 'well'
     setTimeout(()=>{
         authStore.profile = 'pleasure'
+    },3000)
+
+    setTimeout(()=>{
+        authStore.profile = 'riffca'
     },3000)
 }
 

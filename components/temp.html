@@ -5,7 +5,11 @@
 	<div data-click="onSiteClick">
 		{site}
 	</div>
+	
 	<div>
+		{mapClass}
+	</div>
+	<div data-class="mapclass">
 		{map}
 	</div>
 	<div>
@@ -16,7 +20,7 @@
 <script>
 $spa.initCustomElement({
 	name: 'temp',
-	attrs: ['text', 'site', 'map', 'tag', 'profile'],
+	attrs: ['text', 'site', 'map', 'tag', 'profile', 'map-class'],
 })
 
 const { element, proxy } = $spa.getRoots($componentId)
@@ -34,7 +38,9 @@ function onTextClick() {
 	proxy.site = '333'
 	proxy.tag = {
 		name: 'fff'
-	}	
+	}
+
+	proxy.mapClass = 'bg-gray-400'	
 }
 
 function onSiteClick() {

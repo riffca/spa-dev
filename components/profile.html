@@ -1,0 +1,28 @@
+<div class="flex gap-4">
+	<img class="w-16" src="https://robohash.org/YOUR-TEXT.png">
+	<div >
+		<div class="text-xl p-2 cursor-pointer" data-click="onProfileClick">
+			{profileName}
+		</div>
+		<div>{role}</div>
+	</div>
+</div>
+<script>
+
+
+$spa.initCustomElement({
+	name: 'profile',
+	attrs: ['profile-name', 'role'],
+})
+
+const { element, proxy } = $spa.getRoots($componentId)
+
+const store = $spa.bindStore('auth', {
+	profileName: 'profile'
+})
+
+function onProfileClick(){
+   proxy.role = 'administrator'
+   store.profile = 'next profile'
+}
+</script>

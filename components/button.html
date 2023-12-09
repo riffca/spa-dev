@@ -11,7 +11,7 @@ const componentId = document.currentScript.id
 const component = $spa.initCustomElement({
 	name: 'button',
 	componentId,
-	attrs: ['icon','text', 'name', 'skipedicon'],
+	attrs: ['icon','text', 'name', 'skiped-icon'],
 })
 
 const InterButton = $spa.bindCustomComponent(component,{
@@ -23,7 +23,7 @@ const InterButton = $spa.bindCustomComponent(component,{
 	},
 	init(proxy){
 		proxy.text = null
-		proxy.icon = 'icon'
+		proxy.icon = 'icon2'
 		proxy.name = 1
 		proxy.skipedIcon = true
 	}

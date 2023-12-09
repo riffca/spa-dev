@@ -1,4 +1,5 @@
 const definedStores = {}
+
 export function createStore(name){
 	const app = {
 		setHandler(componentId, proxy, storeKey, bindKey){	
@@ -13,6 +14,7 @@ export function createStore(name){
 
 		},
 		handlers: {},
+		reactValues
 	}
 	const store = new Proxy(app, {
 		get(target, prop, receiver) {
@@ -30,11 +32,7 @@ export function createStore(name){
 		},
 		set(target, prop, value) {
 			target[prop] = value
-			if(store.handlers[prop]) {
-				store.handlers[prop].forEach(item=>{
-					item.proxy[item.bindKey] = value
-				})
-			}
+			reactValue(prop, value)
 
 			return true
 			//return Reflect.set(target, prop, value, receiver)
@@ -44,9 +42,12 @@ export function createStore(name){
 
 	definedStores[name] = store 
 
-	Object.keys(store).forEach(key=>{
-		reactValue(key, store[key])
-	})
+	function reactValues(){
+		Object.keys(store).forEach(key=>{
+			reactValue(key, store[key])
+		})
+	}
+
 
 	function reactValue(prop, value){
 		if(store.handlers[prop]) {
@@ -58,7 +59,6 @@ export function createStore(name){
 
 	return store
 }
-
 
 
 export function getStore(name) {
