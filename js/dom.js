@@ -61,6 +61,7 @@ function getScriptString(script, id, componentName){
 	  })
   }
 
+
   const handlersString = handlerNames.length ? `
   	$spa.collectHandlers($componentId, {
 		${handlerNames.join(',')}
@@ -77,6 +78,12 @@ function getScriptString(script, id, componentName){
   if(storeStrIndex !== -1) {
   	script = script.splice(storeStrIndex, '$spa.bindStore('.length, '$spa.bindStore($componentId, proxy, ')
   	console.log(componentName,storeStrIndex)
+  }
+
+  const watcherStrIndex = script.indexOf('$spa.watch(')
+  if(watcherStrIndex !== -1) {
+  	script = script.replaceAll('$spa.watch(', '$spa.watch($componentId, ')
+  	console.log(componentName,watcherStrIndex)
   }
 
 
@@ -203,6 +210,42 @@ async function getComponent(componentName, folder='components'){
 	}
 
 	return getTemplate(template, path)
+}
+
+function getPath(folder, componentName){
+	return `../${folder}/${componentName}.html`
+}
+
+async function fetchTemplate(folder, componentName){
+	let path = getPath(folder, componentName)
+	let { noResponse, template } = await fetchPath(path)
+	if(noResponse) {
+		const path = componentName+'/index'
+		const { noResponse: noRes, template: temp} = await fetchPath(path)
+		template = temp
+		noResponse = noRes
+		if(noRes) {
+			const path = componentName.split('-').join('/')
+			const { noResponse: nr, template: tp } = await fetchPath(path)
+			if(nr) {
+				template = tp
+				noResponse = ns
+			}
+		}
+
+	}
+	return { template, noResponse, path }
+}
+
+async function fetchPath(path){
+		const template = await fetch(path)
+			.then(res=>res.text()).then((res)=>res)
+		const noResponse = template.includes('Not Found');
+
+		return {
+			noResponse,
+			template
+		}
 }
 
 

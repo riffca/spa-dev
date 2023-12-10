@@ -2,6 +2,12 @@ export function getUUID(){
     return crypto.getRandomValues(new Uint32Array(4)).join('');
 }
 
+export function kebabize(string) {
+  // uppercase after a non-uppercase or uppercase before non-uppercase
+  const upper = /(?<!\p{Uppercase_Letter})\p{Uppercase_Letter}|\p{Uppercase_Letter}(?!\p{Uppercase_Letter})/gu;
+  return string.replace(upper, "-$&").replace(/^-/, "").toLowerCase();
+}
+
 export function getInner(node){
     return [...node.querySelectorAll('[data-component]')]
 }

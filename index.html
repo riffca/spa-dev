@@ -10,7 +10,7 @@
 	</style>
 </head>
 <body>
-	<app-temp></app-temp>
+	<app-temp id="qwe"></app-temp>
 	<app-temp></app-temp>
 	
 	<app-layout>
@@ -21,6 +21,10 @@
 
 	<script type="module">
 		import './js/app.js'
+
+		qwe.addEventListener('input',event=>{
+			console.log(event.value)
+		})
 	</script>
 	
 </body>

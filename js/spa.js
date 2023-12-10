@@ -1,4 +1,11 @@
-import { bindElement, addEventListener, initCustomElement, bindCustomComponent, definedComponentsProxies, definedCustomComponents, definedHandlers } from './interface.js'
+import { bindElement, 
+addEventListener, 
+initCustomElement, 
+bindCustomComponent, 
+definedComponentsProxies, 
+definedCustomComponents, 
+definedHandlers,
+watchers } from './interface.js'
 import { getUUID, checkParentHasAttribute, createList } from './utils.js'
 
 import { getStore } from './store.js'
@@ -36,9 +43,6 @@ window.$spa = {
 	},
 	getRoots(id, options){
 		const element = this.getCustomElement(id)
-		// options?.click && this.addEventListener(element, 'click',(event)=>{
-		// 	options.click(event)
-		// })
 		return {
 			element,
 			proxy: this.getComponentProxy(id)
@@ -64,6 +68,12 @@ window.$spa = {
 		store.reactValues()
 
 		return store
+	},
+	watch(componentId, prop, func){
+		if(!watchers[componentId][prop]) {
+			watchers[componentId][prop]=[]
+		}
+		watchers[componentId][prop].push(func)
 	}
 }
 

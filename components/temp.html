@@ -5,7 +5,6 @@
 	<div data-click="onSiteClick">
 		{site}
 	</div>
-	
 	<div>
 		{mapClass}
 	</div>
@@ -16,23 +15,41 @@
 		{tag.name}
 	</div>
 	<div>{profile}</div>
+	<div data-list="mapList">
+		<div>{name}</div>
+	</div>
+	<input data-model="text" />
 </div>
 <script>
 $spa.initCustomElement({
 	name: 'temp',
-	attrs: ['text', 'site', 'map', 'tag', 'profile', 'map-class'],
+	attrs: ['text', 'site', 'map', 'tag', 'profile', 'map-class', 'map-list'],
+	events: ['input'],
 })
 
 const { element, proxy } = $spa.getRoots($componentId)
 
-$spa.bindStore('auth', {
-	profile: 'profile'
+proxy.text = '500'
+proxy.map = '400'
+
+
+const store = $spa.bindStore('auth', {
+	profile: 'profile',
 })
 
-// $spa.collectHandlers($componentId, {
-// 	onTextClick,
-// 	onSiteClick
-// })
+$spa.watch('mapClass',(value)=>{
+	console.log(value)
+})
+
+$spa.watch('text',(value)=>{
+	element.emit('input',value)
+})
+
+proxy.mapList = [{
+	name: 'Hello'
+},{
+	name: 'create'
+}]
 
 function onTextClick() {
 	proxy.site = '333'
@@ -50,16 +67,23 @@ function onSiteClick() {
 	}	
 }
 
-proxy.text = '500'
-proxy.map = '400'
-
 
 setTimeout(()=>{
 	proxy.site = 'new site'
 	proxy.tag = {
 		name: 'value'
 	}
+
+	element.emit('input',123)
+	
 },3000)
+
+
+setTimeout(()=>{
+	element.emit('input',{ a: 'asd'})
+	proxy.text = 111111
+},4000)
+
 
 function getMap(){
 	return proxy.text  + $componentId

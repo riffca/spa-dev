@@ -1,6 +1,6 @@
 
 import { initCustomComponents } from './dom.js'
-import { checkIsValidJson, checkParent } from './utils.js'
+import { checkIsValidJson, checkParent, kebabize } from './utils.js'
 
 
 const listeners = new Map()
@@ -32,7 +32,8 @@ export function initCustomElement({
 	componentId,
 	attrs = [],
 	classes,
-	proxy
+	proxy,
+	events
 }) {
 	const componentName = "app-" + name
 
@@ -48,6 +49,7 @@ export function initCustomElement({
 			constructor() {
 				super()
 				this.listTemplates = {}
+				this.events = {}
 				this.classList.add(classes)
 				if(componentName.includes('page')) {
 					this.classList.add('h-full')
@@ -107,13 +109,6 @@ export function initCustomElement({
 			}
 
 			connectedCallback() {
-				// if (!this.rendered) {
-				// 	this.rendered = true;
-
-				// 	if(this.hasAttribute('data-init')) {
-				// 		this.componentId = this.getAttribute('data-init')
-				// 	}
-				// }
 			}
 
 			static get observedAttributes() {
@@ -143,6 +138,7 @@ export function initCustomElement({
 
 			onInit(){
 				this.componentId = this.getAttribute('data-init')
+				this.initEnvents()
 				this.initSlots()
 				this.setupHtml()
 				this.initLists()
@@ -168,7 +164,7 @@ export function initCustomElement({
 			initLists(){
 				const components = this.querySelectorAll('[data-list]');
 				[...components].forEach(comp=>{
-					const key = comp.getAttribute('data-list').toLowerCase()
+					const key = comp.dataset.list
 					this.listTemplates[key] = comp.cloneNode(true)
 				})
 
@@ -176,6 +172,34 @@ export function initCustomElement({
 			initProxy(){
 				this.proxy = bindProxy(this, {})
 				definedComponentsProxies[this.componentId] = this.proxy
+
+				initDataModel(this, this.proxy)
+			}
+
+			initEnvents(){
+				events && events.forEach(event=>{
+					this.events[event] = new CustomEvent(event, {
+					  bubbles: true,
+					  cancelable: false,
+					  composed: true
+					});	
+				})
+			}
+
+			// createEvent(name, data) {
+			// 	return new CustomEvent(event, {
+			// 		  bubbles: true,
+			// 		  cancelable: false,
+			// 		  composed: true,
+			// 		  detail: data
+			// 	});	
+			// }
+
+			emit(event, value){
+				if(this.events[event]){
+					this.events[event].value = value
+					this.dispatchEvent(this.events[event])
+				}
 			}
 		},
 	);
@@ -190,11 +214,8 @@ export function bindCustomComponent(selector, extend, options) {
 	return bindProxy(selector, extend, options)
 }
 
-function kebabize(string) {
-  // uppercase after a non-uppercase or uppercase before non-uppercase
-  const upper = /(?<!\p{Uppercase_Letter})\p{Uppercase_Letter}|\p{Uppercase_Letter}(?!\p{Uppercase_Letter})/gu;
-  return string.replace(upper, "-$&").replace(/^-/, "").toLowerCase();
-}
+
+export const watchers = {}
 
 export function bindProxy(selector, extender, options) {
 	if(typeof extender === 'function') {
@@ -225,6 +246,8 @@ export function bindProxy(selector, extender, options) {
 		addEventListener(app.lib.target, 'click', extend.click)
 	}
 
+	watchers[currentElement.dataset.init] = {}
+
 	const wrap = new Proxy(app, {
 		get(target, prop, receiver) {
 			const value = target[prop];
@@ -242,6 +265,8 @@ export function bindProxy(selector, extender, options) {
 		set(target, prop, value) {
 			target[prop] = value
 
+			this.watch(prop, value)
+
 			const attrCase = kebabize(prop)
 
 			if (typeof value === 'object') {
@@ -254,7 +279,16 @@ export function bindProxy(selector, extender, options) {
 			return true
 			//return Reflect.set(target, prop, value, receiver)
 
+		},
+		watch(prop, value){
+			const action = watchers[currentElement.dataset.init][prop]
+			if(Array.isArray(action)) {
+				action.forEach(fn=>{
+					fn(value)
+				})
+			} 
 		}
+
 	});
 
 	init && init(wrap)
@@ -308,7 +342,7 @@ function updateTemplates(target, object){
 function setupLists(target, object) {
 	const components = target.querySelectorAll('[data-list]');
 	[...components].forEach(comp=>{
-		const listKey = comp.getAttribute('data-list').toLowerCase()
+		const listKey = comp.dataset.list
 		if(!object[listKey]) return
 		Object.keys(object).forEach(key=>{
 			if(key === listKey) {
@@ -333,7 +367,7 @@ function setupLists(target, object) {
 function updateHidden(target, object) {
 	const components = target.querySelectorAll('[data-show]');
 	[...components].forEach(comp=>{
-		const key = comp.getAttribute('data-show')
+		const key = comp.dataset.show
 		const kebabCase = kebabize(key)
 		if(target.hasAttribute(kebabCase)) {
 			const truthy = target.getAttribute(kebabCase) === 'true'
@@ -348,6 +382,20 @@ function updateDatasetAttrs(component, object) {
 	})
 	interateBySelector(component, '[data-src]', (element)=>{
 		updateAttrsTemplates(element, object) 
+	})
+}
+
+function initDataModel(component, proxy){
+	interateBySelector(component, '[data-model]', (element)=>{
+		const prop = element.dataset.model
+		addEventListener(element, 'input', (event)=>{
+			proxy[prop] = event.target.value
+			console.log(222, event.target.value, proxy)
+
+		})
+		$spa.watch(component.dataset.init, prop, (value)=>{
+			element.value = value
+		})
 	})
 }
 
