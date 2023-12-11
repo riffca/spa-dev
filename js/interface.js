@@ -280,11 +280,6 @@ export function bindProxy(selector, extender, options) {
 		return getRootParent(proxy.parent, nextValue, prop)
 	}	
 
-	// const { rootParent, finalValue } = getRootParent(this)
-	// 			rootParent.watch(rootParent.parentProp, target)
-
-	// 			const { rootParent, finalValue } = getRootParent(this)
-
 	const handler = {
 		get(target, prop, receiver) {
 			const value = target[prop];
@@ -294,7 +289,7 @@ export function bindProxy(selector, extender, options) {
 				};
 			}
 
-			if(value !== null && typeof value === 'object') {
+			if(value !== null && typeof value === 'object' || Array.isArray(value)) {
 				return new Proxy(target[prop], { ...handler, parent: this, parentProp: prop })
 			}
 
@@ -310,13 +305,12 @@ export function bindProxy(selector, extender, options) {
 				const { parent, value, key } = getRootParent(this, target, prop)
 				parent.watch(key, value[key])
 				const attrCase = kebabize(key)
-				updateBindAttributes(target, attrCase)
-				update && update(prop, target, currentElement)
+				updateBindAttributes(value[key], attrCase)
+				update && update(prop, value[key], currentElement)
 				return true
 			} 
 				
 			this.watch(prop, value)
-
 			const attrCase = kebabize(prop)
 			updateBindAttributes(value, attrCase)
 			update && update(prop, value, app.lib.target)
@@ -343,13 +337,11 @@ export function bindProxy(selector, extender, options) {
 
 
 function updateTemplates(target, object){
-
 	Object.keys(object).forEach(key=>{
 		if(['null', 'undefined'].includes(object[key])){
 			object[key] = ''
 		}
 	})
-
 	const components = target.querySelectorAll('*');
 	[...components].forEach(comp=>{
 		const textContent = comp.textContent.slice()
@@ -398,7 +390,6 @@ function setupLists(target, object) {
 				list.forEach(item=>{
 					const template = target.listTemplates[listKey].cloneNode(true)
 					updateTemplates(template, item);
-
 					[...template.children].forEach(child=>{
 						updateAttrsTemplates(child, item)
 					})
@@ -465,18 +456,33 @@ function getValue(proxy, prop){
 }
 
 
+function setInnerProp(target, prop, value){
+	let result
+	const keys = prop.split('.')
+	keys.forEach((item,index)=>{
+		if(!result) {
+			result = target[item]
+			return
+		} 
+		if(index < keys.length - 1) {
+			result = result[item]
+		}
+	})
+	result[keys.at(-1)] = value
+}
+
+
 function initDataModel(component, proxy){
 	interateBySelector(component, '[data-model]', (element)=>{
 		const prop = element.dataset.model
 		addEventListener(element, 'input', (event)=>{
 			event.stopPropagation()
-			const inner = prop.split('.')
 			const value = event.value || event.target.value
 
-			if(inner.length > 1) {
-				proxy[inner[0]][inner[1]] = value
+			if(prop.includes('.')){
+				setInnerProp(proxy, prop, value)
 				return
-			}
+			} 
 
 			proxy[prop] = value
 			//setValue(proxy, prop, event.value || event.target.value)
