@@ -24,10 +24,8 @@ proxy.credentials = {
 	password: 'asr',
 }
 
-$spa.watch('credentials', ()=> {
-
-	console.log('watch cred')
-
+$spa.watch('credentials', (value)=> {
+	console.log('watch cred', value)
 	const errors = {}
 	const { password, email} = proxy.credentials
 
