@@ -93,3 +93,16 @@ export function insertSlot(elTarget){
     } 
 }
 
+export function loopKeys(object){
+    Object.keys(object).forEach(key=>{ 
+        cb(key, object[key])
+    })
+}
+
+export function getPropByString(key, object){
+    return key.split('.').reduce((o, i) => {
+        if (o) return o[i];
+        return '';
+    }, object);
+}
+

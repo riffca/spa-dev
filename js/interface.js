@@ -14,7 +14,12 @@ export const definedHandlers = {}
 export function addEventListener(target, event, handler) {
 	if (!target) return
 	target.addEventListener(event, handler)
-	listeners.set(handler, target)
+
+	// if(!listeners.get(target)) {
+	// 	listeners.set(target, [])
+	// }
+	// listeners.set(target, [...listeners.get(target), handler])
+	// console.log(9999, listeners)
 }
 
 export function bindElement(selector, extend, options) {
@@ -148,6 +153,7 @@ export function initCustomElement({
 				setTimeout(()=>{
 					if(definedHandlers[this.componentId]) {
 						addEventListener(this, 'click', this.clickHandler)	
+						this.initInputEvents()
 					}
 				})
 
@@ -201,6 +207,17 @@ export function initCustomElement({
 					this.dispatchEvent(this.events[event])
 				}
 			}
+
+			initInputEvents(){
+				interateBySelector(this, '[data-on-input]', (element)=>{
+					const handler =	definedHandlers[this.dataset.init]?.[element.dataset.onInput]
+					if(!handler) return
+					addEventListener(element, 'input',(event)=>{
+						event.stopPropagation()
+						handler(event)
+					})
+				})
+			}
 		},
 	);
 
@@ -248,13 +265,37 @@ export function bindProxy(selector, extender, options) {
 
 	watchers[currentElement.dataset.init] = {}
 
-	const wrap = new Proxy(app, {
+	const  updateBindAttributes = (value, attribute)=>{
+		if (typeof value === 'object') {
+			currentElement.setAttribute(attribute, JSON.stringify(value))
+		} else {
+			currentElement.setAttribute(attribute, value)
+		}
+	}
+
+	const getRootParent = (proxy, value, key)=> {
+		if(!proxy.parent) return { parent: proxy, value, key }
+		const prop = proxy.parentProp
+		const nextValue = { [prop]: value }
+		return getRootParent(proxy.parent, nextValue, prop)
+	}	
+
+	// const { rootParent, finalValue } = getRootParent(this)
+	// 			rootParent.watch(rootParent.parentProp, target)
+
+	// 			const { rootParent, finalValue } = getRootParent(this)
+
+	const handler = {
 		get(target, prop, receiver) {
 			const value = target[prop];
 			if (value instanceof Function) {
 				return function(...args) {
 					return value.apply(this === receiver ? target : this, args);
 				};
+			}
+
+			if(value !== null && typeof value === 'object') {
+				return new Proxy(target[prop], { ...handler, parent: this, parentProp: prop })
 			}
 
 			return value;
@@ -265,16 +306,19 @@ export function bindProxy(selector, extender, options) {
 		set(target, prop, value) {
 			target[prop] = value
 
+			if(this.parent) {
+				const { parent, value, key } = getRootParent(this, target, prop)
+				parent.watch(key, value[key])
+				const attrCase = kebabize(key)
+				updateBindAttributes(target, attrCase)
+				update && update(prop, target, currentElement)
+				return true
+			} 
+				
 			this.watch(prop, value)
 
 			const attrCase = kebabize(prop)
-
-			if (typeof value === 'object') {
-				app.lib.setAttribute(attrCase, JSON.stringify(value))
-			} else {
-				app.lib.setAttribute(attrCase, value)
-			}
-
+			updateBindAttributes(value, attrCase)
 			update && update(prop, value, app.lib.target)
 			return true
 			//return Reflect.set(target, prop, value, receiver)
@@ -287,9 +331,10 @@ export function bindProxy(selector, extender, options) {
 					fn(value)
 				})
 			} 
-		}
+		},
+	}
 
-	});
+	const wrap = new Proxy(app, handler)
 
 	init && init(wrap)
 
@@ -317,7 +362,8 @@ function updateTemplates(target, object){
 		  	if(renderText) {
 		  		Object.keys(object).forEach(key=>{
 		  			if(renderText.includes(key)) {
-		  				if(!object[key]) return
+		  				if(object[key] === undefined) return
+		  				if(object[key] === null) return
 		  				currentNode.textContent = renderText.template(object)
 		  			}
 		  		})
@@ -332,6 +378,7 @@ function updateTemplates(target, object){
 		  				parent.setAttribute('data-render', parent.textContent.slice())
 		  			}
 		  			parent.textContent = value.template(object)
+	
 				}	
 		  	}
 		  }
@@ -385,16 +432,59 @@ function updateDatasetAttrs(component, object) {
 	})
 }
 
+function loopKeys(){
+	Object.keys(object).forEach(key=>{ 
+		cb(key, object[key])
+	})
+}
+
+function setValue(proxy, prop, value){
+	if(Array.isArray(proxy[prop])) {
+		proxy[prop] = [...proxy[prop], value]
+		return
+	}
+
+	const inner = prop.split('.')
+
+	if(inner.length > 1) {
+		proxy[inner[0]][inner[1]] = value
+		const newObject = { ...proxy[inner[0]] }
+		proxy[inner[0]] = { ...proxy[inner[0]] }
+		return
+	}
+
+	proxy[prop] = value
+}
+
+function getValue(proxy, prop){
+	const inner = prop.split('.')
+	if(inner.length > 1) {
+		return proxy[inner[0]][inner[1]]
+	}
+	return proxy[prop]
+}
+
+
 function initDataModel(component, proxy){
 	interateBySelector(component, '[data-model]', (element)=>{
 		const prop = element.dataset.model
 		addEventListener(element, 'input', (event)=>{
-			proxy[prop] = event.target.value
-			console.log(222, event.target.value, proxy)
+			event.stopPropagation()
+			const inner = prop.split('.')
+			const value = event.value || event.target.value
 
+			if(inner.length > 1) {
+				proxy[inner[0]][inner[1]] = value
+				return
+			}
+
+			proxy[prop] = value
+			//setValue(proxy, prop, event.value || event.target.value)
 		})
-		$spa.watch(component.dataset.init, prop, (value)=>{
-			element.value = value
+
+		const propWatched = prop.split('.')[0]
+		$spa.watch(component.dataset.init, propWatched, (value)=>{
+			element.value = getValue(proxy, prop)
 		})
 	})
 }
@@ -404,7 +494,7 @@ function updateAttrsTemplates(component, object) {
 		if(component.dataset) {
 			const dataset = {...component.dataset }
 			Object.keys(dataset).forEach(key=>{ 
-				if(dataset[key] === prop) {
+				if(dataset[key].split('.')[0] === prop) {
 					component.setAttribute(key, `{${dataset[key]}}`.template(object))
 				}
 			})

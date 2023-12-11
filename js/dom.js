@@ -41,7 +41,9 @@ export async function initCustomComponents(target=null,folder="components"){
 		if(!existingTemplate) {
 			innerHtml.setAttribute('id', templateName)
 			innerHtml.hidden = true
-			document.body.appendChild(innerHtml)
+
+			const templates = document.getElementById('templates')
+			templates.appendChild(innerHtml)
 		}
 
 		if(script) { 
@@ -55,12 +57,19 @@ function getScriptString(script, id, componentName){
   const handlerNames = []
   const template = document.getElementById('template-app-'+componentName)
   if(template) {
-  	  const comps = template.querySelectorAll('[data-click]');
-	  [...comps].forEach(comp=>{
-	  	handlerNames.push(comp.dataset.click)
-	  })
+  	{
+  		const comps = template.querySelectorAll('[data-click]');
+		  [...comps].forEach(comp=>{
+		  	handlerNames.push(comp.dataset.click)
+		  })
+  	}
+  	{
+  		const comps = template.querySelectorAll('[data-on-input]');
+		  [...comps].forEach(comp=>{
+		  	handlerNames.push(comp.dataset.onInput)
+		  })		
+  	}
   }
-
 
   const handlersString = handlerNames.length ? `
   	$spa.collectHandlers($componentId, {

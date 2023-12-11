@@ -19,6 +19,7 @@
 		<div>{name}</div>
 	</div>
 	<input data-model="text" />
+	<input data-on-input="onTempInput">
 </div>
 <script>
 $spa.initCustomElement({
@@ -65,6 +66,10 @@ function onSiteClick() {
 	proxy.tag = {
 		name: 'qq'
 	}	
+}
+
+function onTempInput(event) {
+	proxy.mapClass = event.target.value
 }
 
 

@@ -1,0 +1,58 @@
+<div class="flex items-center justify-center bg-grey-200">
+	<div>{errors.email}</div>
+	<div>{credentials.password}</div>
+
+
+	<div class="bg-black p-5">
+		<input data-class="errors.email" data-model="credentials.email" />
+		<input data-class="errors.password" data-model="credentials.password" />
+	</div>
+
+	<button data-click="onButtonClick">Hello</button>
+<div>
+
+<script>
+$spa.initCustomElement({
+	name: 'page-auth',
+	attrs: ['credentials', 'errors'],
+})
+
+const { element, proxy } = $spa.getRoots($componentId)
+
+proxy.credentials = {
+	email: 'ssta',
+	password: 'asr',
+}
+
+$spa.watch('credentials', ()=> {
+
+	console.log('watch cred')
+
+	const errors = {}
+	const { password, email} = proxy.credentials
+
+	if(password.length < 5) {
+		errors.password = 'text-red-300'
+	}
+	if(email.length < 5) {
+		errors.email = 'text-red-300'
+	}
+	proxy.errors = errors
+})
+
+
+setTimeout(()=>{
+	proxy.credentials = {
+		email: '11',
+		password: '11',
+	}
+},3000)
+
+
+function onButtonClick(){
+	if(Object.values(proxy.errors).length) {
+		alert('error')
+	}
+}
+
+</script>

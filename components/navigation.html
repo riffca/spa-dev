@@ -22,6 +22,10 @@ const InterLogo = $spa.bindCustomComponent(component,{
 			{
 		 		src: '#profile',
 		 		title: 'Profile'
+			},
+			{
+		 		src: '#auth',
+		 		title: 'Auth'
 			}
 		]
 
@@ -29,16 +33,9 @@ const InterLogo = $spa.bindCustomComponent(component,{
 })
 
 setTimeout(()=>{
-		InterLogo.navList = [
-			{
-		 		src: '#profile',
-		 		title: 'Profile'
-			}
-		, 
-			{
+		InterLogo.navList.push({
 		 		src: '#lazy',
 		 		title: 'Lazy'
-			}
-		]
+			}) 
 		},2000)
 </script>

@@ -1,0 +1,16 @@
+<div>
+	<input data-model="inputInternal" type="text">
+</div>
+<script>
+$spa.initCustomElement({
+	name: 'temp',
+	attrs: ['input-internal'],
+	events: ['input'],
+})
+
+const { element, proxy } = $spa.getRoots($componentId)
+
+$spa.watch('inputInternal', (val)=>{
+	element.emit('input', val)
+})
+</script>
