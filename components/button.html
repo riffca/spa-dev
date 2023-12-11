@@ -2,7 +2,7 @@
 	<div>{text}</div>
 	<div data-slot></div>
 	<div>{name}</div>
-	<div data-show="skipedIcon">{icon}</div> 
+	<div data-show="iconShown">{icon}</div> 
 </div>
 <script>
 
@@ -11,7 +11,7 @@ const componentId = document.currentScript.id
 const component = $spa.initCustomElement({
 	name: 'button',
 	componentId,
-	attrs: ['icon','text', 'name', 'skiped-icon'],
+	attrs: ['icon','text', 'name', 'icon-shown'],
 })
 
 const InterButton = $spa.bindCustomComponent(component,{
@@ -25,7 +25,7 @@ const InterButton = $spa.bindCustomComponent(component,{
 		proxy.text = null
 		proxy.icon = 'icon2'
 		proxy.name = 1
-		proxy.skipedIcon = true
+		proxy.iconShown = false
 	}
 })
 
@@ -33,6 +33,6 @@ const InterButton = $spa.bindCustomComponent(component,{
 setTimeout(()=>{
 	InterButton.text = 'qwe'
 	InterButton.name = InterButton.getName()
-	InterButton.skipedIcon = false
+	InterButton.iconShown = true
 },3000)
 </script>

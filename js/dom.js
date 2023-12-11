@@ -86,13 +86,11 @@ function getScriptString(script, id, componentName){
   const storeStrIndex = script.indexOf('$spa.bindStore(')
   if(storeStrIndex !== -1) {
   	script = script.splice(storeStrIndex, '$spa.bindStore('.length, '$spa.bindStore($componentId, proxy, ')
-  	console.log(componentName,storeStrIndex)
   }
 
   const watcherStrIndex = script.indexOf('$spa.watch(')
   if(watcherStrIndex !== -1) {
   	script = script.replaceAll('$spa.watch(', '$spa.watch($componentId, ')
-  	console.log(componentName,watcherStrIndex)
   }
 
 

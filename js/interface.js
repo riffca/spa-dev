@@ -76,20 +76,23 @@ export function initCustomElement({
 
 				//update slots
 				const slot = html.querySelector('[data-slot]')
+
 				if (slot && this.slotTemplate) {
 					const slotClone = this.slotTemplate.cloneNode(true)
 					const children = slotClone.querySelectorAll('*');
 					[...children].forEach(item=>{
 						item.setAttribute('data-in-slot', this.componentId)
 					})
-					slot.replaceChildren(...slotClone.children)
+
+
+					slot.replaceChildren(...slotClone.childNodes)
 				}
 
 				//add parent ids
 				const children = html.querySelectorAll('*');
 				[...children].forEach(item=>{
 					html.setAttribute('data-parent', this.componentId)
-					item.setAttribute('data-parent', this.componentId)
+					!item.hasAttribute('data-parent') && item.setAttribute('data-parent', this.componentId)
 				})
 
 				//insert defined html
@@ -139,16 +142,14 @@ export function initCustomElement({
 					this.listen(name, newValue)
 					setupLists(this, this.getJSON(name, newValue))
 					updateTemplates(this, this.getJSON(name, newValue))
-					updateHidden(this, this.getJSON(name, newValue))
 					updateDatasetAttrs(this, this.getJSON(name, newValue))
-
-		
+					updateHidden(this, this.getJSON(name, newValue))
 				}
 
 			}
 
-			clickHandler(event){
-				runHandler(this.componentId, event)
+			clickHandler(event, root=null){
+				runHandler(this.componentId, event, root)
 			}
 
 			onInit(){
@@ -161,8 +162,14 @@ export function initCustomElement({
 				definedCustomComponents[this.componentId] = this
 
 				setTimeout(()=>{
-					if(definedHandlers[this.componentId]) {
-						addEventListener(this, 'click', this.clickHandler)	
+					if(definedHandlers[this.componentId] || this.dataset.click) {
+						addEventListener(this, 'click', ()=>{
+							if(this.dataset.click) {
+								this.clickHandler(event, this)
+							} else  {
+								this.clickHandler(event)
+							}
+						})
 						this.initInputEvents()
 					}
 				})
@@ -170,10 +177,11 @@ export function initCustomElement({
 			}
 
 			initSlots(){
-				if(this.children.length) {
+				if(this.childNodes.length) {
 					const slotTemplate = document.createElement('div')
-					slotTemplate.replaceChildren(...this.children)
-					this.slotTemplate = slotTemplate.cloneNode(true)	
+					slotTemplate.replaceChildren(...this.childNodes)
+					//slotTemplate.setAttribute('data-parent', this.dataset.init)
+					this.slotTemplate = slotTemplate.cloneNode(true)
 				}
 			}
 
@@ -358,11 +366,6 @@ function updateTemplates(target, object){
 	})
 	const components = target.querySelectorAll('*');
 	[...components].forEach(comp=>{
-
-		// if(target.tagName === 'APP-INPUT') {
-		// 	console.log(object)
-		// }
-
 		const textContent = comp.textContent.slice()
 		const childNodes = comp.childNodes;
 		for (let i = 0; i < childNodes.length; i++) {
@@ -424,12 +427,31 @@ function setupLists(target, object) {
 function updateHidden(target, object) {
 	const components = target.querySelectorAll('[data-show]');
 	[...components].forEach(comp=>{
-		const key = comp.dataset.show
+		const path = comp.dataset.show
+		const key = path.split('.')[0]
+		//if(!Object.hasOwn(object, key)) return
 		const kebabCase = kebabize(key)
-		if(target.hasAttribute(kebabCase)) {
-			const truthy = target.getAttribute(kebabCase) === 'true'
-			comp.hidden = truthy
+
+		const run = cond=> {
+			if(cond) {
+		 		comp.classList.remove('hidden')
+		 	} else {
+		 		comp.classList.add('hidden')
+		 	}
 		}
+		
+		if(target.proxy[key] && path.includes('.')) {
+			const shown =  Boolean(getInnerProp(target.proxy,path))
+			run(shown)
+			return
+		}
+
+		if(typeof target.proxy[key] === 'function') {
+			run(Boolean(target.proxy[key]()))
+		 	return
+		}
+
+		run(Boolean(object[key]))
 	})
 }
 
@@ -493,10 +515,40 @@ function setInnerProp(target, prop, value){
 	result[keys.at(-1)] = value
 }
 
+function getInnerProp(target, prop){
+	let result
+	const keys = prop.split('.')
+	keys.forEach((item,index)=>{
+		if(!result) {
+			result = target[item]
+			return
+		} 
+		result = result[item]
+	})
+	return result
+}
+
+function hasInnerProp(target, prop){
+	let result
+	const keys = prop.split('.')
+	keys.forEach((item,index)=>{
+		if(!result) {
+			result = target[item]
+			return
+		} 
+		if(index < keys.length - 1) {
+			result = result[item]
+		}
+	})
+	if(!result) return false
+	return Object.hasOwn(result, keys.at(-1))
+}
+
+
 
 function initDataModel(component, proxy){
 	interateBySelector(component, '[data-model], [data-value]', (element)=>{
-		const prop = element.dataset.model
+		const prop = element.dataset.model || element.dataset.value
 
 		const handler = (event)=>{
 			//event.stopPropagation() double emit iinput in dom so not working
@@ -556,8 +608,14 @@ function runHandlers(target) {
 	})
 }
 
-function runHandler(componentId, event) {
-	const component = event.target
+function runHandler(componentId, event, root=null) {
+	let component = event.target
+
+	if(root) {
+		componentId = root.parentElement.dataset.parent || root.parentElement.dataset.init
+		component = root
+	}
+
 	if(component.dataset.click) {
 		definedHandlers[componentId][component.dataset.click](event)
 	}

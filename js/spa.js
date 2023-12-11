@@ -69,11 +69,20 @@ window.$spa = {
 
 		return store
 	},
-	watch(componentId, prop, func){
+	watch(componentId, prop, func, immediate=false){
 		if(!watchers[componentId][prop]) {
 			watchers[componentId][prop]=[]
 		}
 		watchers[componentId][prop].push(func)
+
+
+		if(!immediate) return
+		let { proxy } = this.getRoots(componentId)
+		if(proxy[prop]) {
+			proxy[prop] = proxy[prop]
+			console.log(444,prop, proxy[prop])
+		}
+		///func(proxy[prop])
 	}
 }
 
