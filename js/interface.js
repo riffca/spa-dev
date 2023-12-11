@@ -12,9 +12,14 @@ export const definedHandlers = {}
 
 
 export function addEventListener(target, event, handler) {
+	if(listeners.get(target) === event) return
+ 
 	if (!target) return
+
+
 	target.addEventListener(event, handler)
 
+	listeners.set(target, event)	
 	// if(!listeners.get(target)) {
 	// 	listeners.set(target, [])
 	// }
@@ -95,6 +100,7 @@ export function initCustomElement({
 					if(this.getAttribute(attr)) {
 						this.listen(attr, this.getAttribute(attr))
 						setupLists(this, this.getJSON(attr))
+						updateDatasetAttrs(this, this.getJSON(attr))
 						updateTemplates(this, this.getJSON(attr))
 						updateHidden(this, this.getJSON(attr))
 					}
@@ -127,12 +133,16 @@ export function initCustomElement({
 
 					this.onInit()
 				}
+
+
 				if(this.hasAttribute('data-init')) {
 					this.listen(name, newValue)
-					updateDatasetAttrs(this, this.getJSON(name, newValue))
 					setupLists(this, this.getJSON(name, newValue))
 					updateTemplates(this, this.getJSON(name, newValue))
 					updateHidden(this, this.getJSON(name, newValue))
+					updateDatasetAttrs(this, this.getJSON(name, newValue))
+
+		
 				}
 
 			}
@@ -276,6 +286,7 @@ export function bindProxy(selector, extender, options) {
 	const getRootParent = (proxy, value, key)=> {
 		if(!proxy.parent) return { parent: proxy, value, key }
 		const prop = proxy.parentProp
+
 		const nextValue = { [prop]: value }
 		return getRootParent(proxy.parent, nextValue, prop)
 	}	
@@ -283,6 +294,9 @@ export function bindProxy(selector, extender, options) {
 	const handler = {
 		get(target, prop, receiver) {
 			const value = target[prop];
+
+			if(Array.isArray(target)) return target[prop]
+
 			if (value instanceof Function) {
 				return function(...args) {
 					return value.apply(this === receiver ? target : this, args);
@@ -344,6 +358,11 @@ function updateTemplates(target, object){
 	})
 	const components = target.querySelectorAll('*');
 	[...components].forEach(comp=>{
+
+		// if(target.tagName === 'APP-INPUT') {
+		// 	console.log(object)
+		// }
+
 		const textContent = comp.textContent.slice()
 		const childNodes = comp.childNodes;
 		for (let i = 0; i < childNodes.length; i++) {
@@ -415,12 +434,15 @@ function updateHidden(target, object) {
 }
 
 function updateDatasetAttrs(component, object) {
-	interateBySelector(component, '[data-class]', (element)=>{
+	interateBySelector(component, '[data-class], [data-src], [data-value]', (element)=>{
 		updateAttrsTemplates(element, object) 
 	})
-	interateBySelector(component, '[data-src]', (element)=>{
-		updateAttrsTemplates(element, object) 
-	})
+	// interateBySelector(component, '[data-src]', (element)=>{
+	// 	updateAttrsTemplates(element, object) 
+	// })
+	// interateBySelector(component, '[data-value]', (element)=>{
+	// 	updateAttrsTemplates(element, { value: object.model}) 
+	// })
 }
 
 function loopKeys(){
@@ -473,10 +495,12 @@ function setInnerProp(target, prop, value){
 
 
 function initDataModel(component, proxy){
-	interateBySelector(component, '[data-model]', (element)=>{
+	interateBySelector(component, '[data-model], [data-value]', (element)=>{
 		const prop = element.dataset.model
-		addEventListener(element, 'input', (event)=>{
-			event.stopPropagation()
+
+		const handler = (event)=>{
+			//event.stopPropagation() double emit iinput in dom so not working
+
 			const value = event.value || event.target.value
 
 			if(prop.includes('.')){
@@ -486,12 +510,19 @@ function initDataModel(component, proxy){
 
 			proxy[prop] = value
 			//setValue(proxy, prop, event.value || event.target.value)
-		})
+		}
+
+		addEventListener(element, 'input', handler)
 
 		const propWatched = prop.split('.')[0]
 		$spa.watch(component.dataset.init, propWatched, (value)=>{
-			element.value = getValue(proxy, prop)
+			//element.value = getValue(proxy, prop)
+			element.setAttribute('value',getValue(proxy, prop)) 
 		})
+
+		// if(element.tagName.includes('APP')) {
+		// 	element.setAttribute('value', 123)
+		// }
 	})
 }
 

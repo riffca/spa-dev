@@ -1,11 +1,13 @@
-<div class="flex items-center justify-center bg-grey-200">
+<div class="flex flex-col items-center justify-center bg-grey-200">
 	<div>{errors.email}</div>
 	<div>{credentials.password}</div>
+	<div>{credentials.email}</div>
 
-
-	<div class="bg-black p-5">
-		<input data-class="errors.email" data-model="credentials.email" />
-		<input data-class="errors.password" data-model="credentials.password" />
+	<div class="bg-black p-12">
+		<app-input data-class="errors.email" data-model="credentials.email">
+		</app-input>
+		<app-input data-class="errors.password" data-model="credentials.password">
+		</app-input>
 	</div>
 
 	<button data-click="onButtonClick">Hello</button>
@@ -25,7 +27,6 @@ proxy.credentials = {
 }
 
 $spa.watch('credentials', (value)=> {
-	console.log('watch cred', value)
 	const errors = {}
 	const { password, email} = proxy.credentials
 
@@ -48,6 +49,10 @@ function onButtonClick(){
 	if(Object.values(proxy.errors).length) {
 		alert('error')
 	}
+}
+
+function onInput(){
+	console.log(55,event)
 }
 
 </script>
