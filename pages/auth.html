@@ -1,7 +1,13 @@
 <div class="flex bg-black  items-start justify-center bg-grey-200">
 	<div>
 		<div class="text-red-400" data-list="authList">
-			<div data-click="onCheckListClick" data-class="checkListClass">{title}</div>
+			<div 
+				data-class="checkListClass">
+				<div 
+					data-click="onCheckListClick" 
+					>{title}</div>
+				<div>{name.text}</div>
+			</div>
 		</div>
 	</div>
 
@@ -48,7 +54,10 @@ proxy.classes = {}
 proxy.authList = [
 	{
 		title: 'September',
-		color: 'green'
+		color: 'green',
+		name: {
+			text: 'very'
+		}
 	},
 	{
 		title: 'November',
@@ -121,7 +130,9 @@ function onButtonClick(){
 	validate(proxy.credentials)
 }
 
-function onCheckListClick(event){
+
+function onCheckListClick(event, data){
+	if(!event) return
 	const index = parseInt(event.target.dataset.listIndex)
 	const current = proxy.authList[index]
 	proxy.authList[index] = { ...current, title: 2222}

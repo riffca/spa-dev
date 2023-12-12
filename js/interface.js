@@ -101,11 +101,6 @@ export function initCustomElement({
 				//update temlate with defined attributes
 				attrs.forEach(attr=>{
 					if(this.getAttribute(attr)) {
-						// this.listen(attr, this.getAttribute(attr))
-						// setupLists(this, this.getJSON(attr))
-						// updateTemplates(this, this.getJSON(attr))
-						// updateDatasetAttrs(this, this.getJSON(attr))
-						// updateHidden(this, this.getJSON(attr))
 						this.onRender(attr)
 					}
 				})
@@ -141,11 +136,6 @@ export function initCustomElement({
 
 
 				if(this.hasAttribute('data-init')) {
-					// this.listen(name, newValue)
-					// setupLists(this, this.getJSON(name, newValue))
-					// updateTemplates(this, this.getJSON(name, newValue))
-					// updateDatasetAttrs(this, this.getJSON(name, newValue))
-					// updateHidden(this, this.getJSON(name, newValue))
 					this.onRender(name, newValue)
 				}
 
@@ -380,7 +370,7 @@ function updateTemplates(target, object, index=null){
 			object[key] = ''
 		}
 	})
-	const components = target.querySelectorAll('*:not([data-list-index])');
+	const components = target.querySelectorAll(':not([data-list-index])');
 	[...components].forEach(comp=>{
 		const textContent = comp.textContent.slice()
 		const childNodes = comp.childNodes;
@@ -431,10 +421,17 @@ function setupLists(target, object) {
 					updateTemplates(template, item, index);
 					//console.log('aaaaaaa', index);
 
-					[...template.children].forEach((child)=>{
+					const childNodes = template.querySelectorAll('*');
+					[...childNodes].forEach((child)=>{
 						child.setAttribute('data-list-index', index);
 						updateAttrsTemplates(child, item, target.proxy)
-					})
+
+						if(child.dataset.click) {
+							addEventListener(child, 'click', (event)=>{
+								definedHandlers[target.dataset.init][child.dataset.click](event, item)
+							})
+						}	
+					});
 
 					tempWrap.push(template)
 				})
