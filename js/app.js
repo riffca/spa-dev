@@ -12,6 +12,8 @@ async function createApp(){
     authStore.profile = 'well'
     setTimeout(()=>{
         authStore.profile = 'pleasure'
+        authStore.profile = 'pleasure'
+        
     },3000)
 
     setTimeout(()=>{
