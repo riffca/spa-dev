@@ -439,7 +439,7 @@ function updateHidden(target, object) {
 		 		comp.classList.add('hidden')
 		 	}
 		}
-		
+
 		if(target.proxy[key] && path.includes('.')) {
 			const shown =  Boolean(getInnerProp(target.proxy,path))
 			run(shown)
