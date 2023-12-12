@@ -3,22 +3,31 @@ import { createStore } from './store.js'
 import { runApp } from './dom.js'
 
 
-const authStore = createStore('auth')
-    
-    
-async function createApp(){
-    await runApp()
+function initAuthStore(){
+
+    const authStore = createStore('auth')
 
     authStore.profile = 'well'
+    authStore.creds = {
+        admin: true,
+        reporter: false,
+    }
     setTimeout(()=>{
         authStore.profile = 'pleasure'
-        authStore.profile = 'pleasure'
-        
     },3000)
 
     setTimeout(()=>{
         authStore.profile = 'riffca'
+        const creds = authStore.creds
+        authStore.creds = { ...creds, admin: false }
     },3000)
+}
+    
+async function createApp(){
+
+    initAuthStore()
+
+    runApp()
 }
 
 createApp()

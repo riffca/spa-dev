@@ -7,8 +7,10 @@
 
 	<div class="p-12 text-white gap-4 flex flex-col">
 		<app-title data-show="getShownTitle" data-class="getTitleClass">
-			Authorization
+			<div>Authorization</div> 
+			<div>{creds.admin}</div>
 		</app-title>
+
 		<div class="text-black flex flex-col gap-4">
 			<app-input data-class="classes.email" data-model="credentials.email">
 				<div class="py-2" data-show="errors.email">{errors.email}</div>
@@ -24,7 +26,13 @@
 <script>
 $spa.initCustomElement({
 	name: 'page-auth',
-	attrs: ['credentials', 'errors', 'classes', 'auth-list'],
+	attrs: [
+		'credentials', 
+		'errors', 
+		'classes', 
+		'auth-list', 
+		'creds'
+	],
 })
 
 const { element, proxy } = $spa.getRoots($componentId)
@@ -33,6 +41,7 @@ proxy.credentials = {
 	email: 'ssta',
 	password: 'asr',
 }
+
 proxy.errors = {}
 proxy.classes = {}
 
@@ -60,6 +69,9 @@ setTimeout(()=>{
 // 	})
 // },3000)
 
+$spa.bindStore('auth',{
+	creds: 'creds'
+})
 
 $spa.watch('mountedComponent', ()=> {
 	const input = document.body.querySelector('app-input')
@@ -67,7 +79,7 @@ $spa.watch('mountedComponent', ()=> {
 })
 
 proxy.getShownTitle = ()=>{
-	return !Object.keys(proxy.errors).length  
+	return Object.keys(proxy.errors).length  
 }
 
 proxy.getTitleClass = ()=>{
