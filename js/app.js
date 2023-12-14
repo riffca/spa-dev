@@ -2,6 +2,8 @@ import './spa.js'
 import { createStore } from './store.js'
 import { runApp } from './dom.js'
 
+import './firestore/lib.js'
+
 
 function initAuthStore(){
 
@@ -24,9 +26,7 @@ function initAuthStore(){
 }
     
 async function createApp(){
-
     initAuthStore()
-
     runApp()
 }
 

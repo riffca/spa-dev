@@ -1,0 +1,48 @@
+<div class="bg-blue-200">
+	<div data-list="chatMessages">
+		<div>
+			<div class="getMessageClass">{text}</div>
+			<div class="getMessageClass">{icon}</div>	
+		</div>
+	</div>
+
+	<input data-value="inputValue" />
+	<app-button-action data-click="onSendClick">Send</app-button-action>
+</div>
+
+<script>
+$spa.initCustomElement({
+	name: 'chat',
+	attrs: ['chat-messages', 'input-value'],
+	events: ['input'],
+})
+
+const { element, proxy } = $spa.getRoots($componentId)
+
+proxy.inputValue = ''
+
+const getChatMessages = () => {
+	return [
+		{ text: 'new text', icon: 'blue' },
+		{ text: 'new text' },
+		{ text: 'new text' }
+	]
+}
+
+function onSendClick(){
+	proxy.chatMessages.push({
+		text: proxy.inputValue
+	})
+}
+
+proxy.getMessageClass = (index)=>{
+	const message = proxy.chatMessages[index]
+	return message?.text
+}
+
+async function init(){
+	proxy.chatMessages = getChatMessages()
+}
+
+init()
+</script>

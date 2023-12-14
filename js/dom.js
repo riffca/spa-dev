@@ -25,8 +25,8 @@ export async function initCustomComponents(target=null,folder="components"){
 		const path = component.tagName.split('-').slice(1).join('-')
 		const name = path.toLowerCase()
 
-		//const { innerHtml, script } = await fetchTemplate(name, folder)
-		const { innerHtml, script } = await getComponent(name, folder)
+		const { innerHtml, script } = await fetchTemplate(name, folder)
+		//const { innerHtml, script } = await getComponent(name, folder)
 
 		let componentId  = getUUID()
 
@@ -221,15 +221,13 @@ async function getComponent(componentName, folder='components'){
 	return getTemplate(template, path)
 }
 
-function getPath(folder, componentName){
-	return `../${folder}/${componentName}.html`
-}
 
 async function fetchTemplate(componentName, folder){
+	if(componentName.includes('page')) {
+		componentName = componentName.split('-')[1]
+	}
 	let path = getPath(folder, componentName)
 	let { noResponse, template } = await fetchPath(path)
-	console.log(noResponse, template)
-
 
 	if(noResponse) {
 		path = getPath(folder, componentName+'/index')
@@ -240,12 +238,13 @@ async function fetchTemplate(componentName, folder){
 			path = getPath(folder, componentName.split('-').join('/'))
 			const { noResponse: nr, template: tp } = await fetchPath(path)
 			if(nr) {
-				template = tp
 				noResponse = ns
+			} else {
+				template = tp
 			}
 		}
-
 	}
+
 	return getTemplate(template, path)
 }
 
@@ -262,6 +261,8 @@ async function fetchPath(path){
 			.then(res=>res.text()).then((res)=>res)
 		const noResponse = template.includes('Not Found');
 
+		console.log(path, noResponse)
+
 		if(noResponse) {
 			return { template: null, noResponse }
 		}
@@ -273,6 +274,10 @@ async function fetchPath(path){
 		return {
 			template
 		}
+}
+
+function getPath(folder, componentName){
+	return `../${folder}/${componentName}.html`
 }
 
 
