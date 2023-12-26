@@ -4,6 +4,7 @@ import { checkIsValidJson, checkParent, kebabize } from './utils.js'
 
 
 const listeners = new Map()
+const listenersByHandlers = new Map()
 const definedComponents = {}
 const definedSlots = {}
 export const definedComponentsProxies = {}
@@ -12,6 +13,7 @@ export const definedHandlers = {}
 
 
 export function addEventListener(target, event, handler) {
+	if(listenersByHandlers.get(handler)) return
 	if(listeners.get(target) === event) return
  
 	if (!target) return
@@ -19,7 +21,9 @@ export function addEventListener(target, event, handler) {
 
 	target.addEventListener(event, handler)
 
-	listeners.set(target, event)	
+	listeners.set(target, event)
+	listenersByHandlers.set(handler, target)
+
 	// if(!listeners.get(target)) {
 	// 	listeners.set(target, [])
 	// }
@@ -219,6 +223,10 @@ export function initCustomElement({
 			// 		  detail: data
 			// 	});	
 			// }
+
+			setAttr(name, value) {
+				this.setAttribute(name, checkIsValidJson(value))
+			}
 
 			emit(event, value){
 				if(this.events[event]){
@@ -427,9 +435,10 @@ function setupLists(target, object) {
 						updateAttrsTemplates(child, item, target.proxy)
 
 						if(child.dataset.click) {
-							addEventListener(child, 'click', (event)=>{
+							const handler = (event)=>{
 								definedHandlers[target.dataset.init][child.dataset.click](event, item)
-							})
+							}
+							addEventListener(child, 'click', handler)
 						}	
 					});
 
@@ -644,8 +653,16 @@ function runHandlers(target) {
 	})
 }
 
+function checkHasParentList(component){
+	if(!component.parentElement) return false
+	if(component.parentElement.dataset.list) return true
+	return checkHasParentList(component.parentElement)
+
+}
+
 function runHandler(componentId, event, root=null) {
 	let component = event.target
+	if(checkHasParentList(component)) return
 
 	if(root) {
 		componentId = root.parentElement.dataset.parent || root.parentElement.dataset.init

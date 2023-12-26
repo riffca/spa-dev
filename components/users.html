@@ -1,0 +1,37 @@
+<div>
+	<div data-list="users">
+		<div data-click="onUserClick" class="cursor-pointer">
+			{email}
+		</div>
+	</div>
+</div>
+<script type="module">
+import { getFireSnapshot } from './js/firestore/lib.js'
+
+getFireSnapshot('profile',[],{
+	add(data){
+		$proxy.users.push(data)
+	}
+})
+
+$spa.initCustomElement({
+	name: 'users',
+	attrs: ['users'],
+	events: ['clickuser'],
+});
+
+const chatsStore = $spa.bindStore('chats',{
+	chats: 'userChats'
+})
+
+$spa.watch('users',()=>{
+	chatsStore.userChats = $proxy.users
+})
+
+$proxy.users = []
+
+function onUserClick(event){
+	const val = $proxy.users[event.target.dataset.listIndex]
+	$element.emit('clickuser', val)
+}
+</script>

@@ -1,0 +1,106 @@
+<header class="sticky top-0">
+	<app-logo><div>Keys</div></app-logo>
+	<app-logo><div>Dree</div></app-logo>
+	<div data-slot></div>
+
+	<app-navigation></app-navigation>
+	<label class="flex gap-4 items-center">
+		<span>search</span>
+		<input class="text-gray-500" data-header-input placeholder="search" />
+	</label>
+
+	<app-images images="1,2"></app-images>
+
+	<div class="flex items-center gap-[24px]">
+		<div data-profile-name></div>
+		<app-button><div>Log out</div></app-button>
+		<app-button data-get-list><div>Get list</div></app-button>
+	</div>
+
+	<app-profile></app-profile>
+</header>
+
+
+<script>
+
+const componentId = document.currentScript.id
+	
+const component = $spa.initCustomElement({
+	name: 'header',
+	componentId,
+	attrs: ['text','images', 'profile', 'loaded', 'list'],
+	change(target, prop, value){
+		if(prop === 'text') {
+			target.querySelector('input').value = value
+		}
+		if(prop === 'profile') {
+			target.querySelector('[data-profile-name]').textContent = value.name
+		}
+		if(prop === 'images') {
+			target.querySelector('app-images').setAttribute('images', value)
+		}
+	}
+});
+
+		const InterHeader = $spa.bindCustomComponent(component,{
+			loaded: false,
+			profile: null,
+			todos: [],
+			text: null,
+			async loadProfile(){
+				const response = await Promise.resolve([{name: 'one'}])
+				InterHeader.loaded = true
+				InterHeader.profile = JSON.stringify(response)
+			},
+			async getDrinks(){
+				const url = 'https://jsonplaceholder.typicode.com/photos';
+				const options = {
+					method: 'GET',
+					headers: {
+						'X-RapidAPI-Key': 'SIGN-UP-FOR-KEY',
+						'X-RapidAPI-Host': 'the-cocktail-db.p.rapidapi.com'
+					}
+				};
+
+				try {
+					const response = await fetch(url, options);
+					const result = await response.json();
+					InterHeader.images = result.map(item=>item.url)
+				} catch (error) {
+					console.error(error);
+				}
+
+			},
+			async click(event){
+				if($spa.checkParentHasAttribute(event.target,'data-get-list')){
+					InterHeader.getDrinks()
+				}
+			},
+
+		})
+
+		InterHeader.text = 10
+		InterHeader.profile = { name: 'New Guy' }
+		InterHeader.list = [1,2,3,4]
+		setTimeout(()=>{
+			InterHeader.text = '18'
+		},2000)
+
+		console.log(1, component)
+
+		const input = component.querySelector(['[data-header-input]'])
+
+		$spa.addEventListener(input, 'input',(event)=>{
+			InterHeader.text = event.target.value
+		})
+</script>
+<style>
+	
+	header {
+		padding: 1rem;
+		background: green;
+		color: white;
+		display: flex;
+		justify-content: space-between;
+	}
+</style>

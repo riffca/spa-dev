@@ -9,11 +9,7 @@
 		html, body { padding: 0; margin: 0; height: 100%; }
 	</style>
 </head>
-<body>
-	<app-temp id="qwe"></app-temp>
-	<app-temp></app-temp>
-	<app-button-action><div>Hello</div></app-button-action>
-	
+<body>	
 	<app-layout>
 		<div class="w-full h-full">
 			<div data-view class="h-full [&>div]:h-full"></div>
@@ -21,17 +17,13 @@
 	</app-layout>
 
 	<script type="module">
-
 		import './js/app.js'
-
-
 		// qwe.addEventListener('input',event=>{
 		// 	//console.log(event.value)
 		// 	// if(event.detail === null) {
 		// 	// 	console.log(event.value)
 		// 	// }
 		// })
-
 	</script>
 	<div class="hidden" id="templates"></div>
 	

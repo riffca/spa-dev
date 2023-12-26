@@ -1,37 +1,26 @@
 import './spa.js' 
-import { createStore } from './store.js'
+import { watchAuth } from './firestore/lib.js'
+
 import { runApp } from './dom.js'
 
-import './firestore/lib.js'
-
-
-function initAuthStore(){
-
-    const authStore = createStore('auth')
-
-    authStore.profile = 'well'
-    authStore.creds = {
-        admin: true,
-        reporter: false,
+async function loadStores() {
+    for (const value  of [ 'auth', 'chats']) {
+        const store = await import(`./store/${value}.js`)
+        store.init()
     }
-    setTimeout(()=>{
-        authStore.profile = 'pleasure'
-    },3000)
-
-    setTimeout(()=>{
-        authStore.profile = 'riffca'
-        const creds = authStore.creds
-        authStore.creds = { ...creds, admin: false }
-    },3000)
 }
-    
+
 async function createApp(){
-    initAuthStore()
+    await loadStores()
+
+    watchAuth((value)=>{
+        console.log('auth watch',value)
+    })
+
     runApp()
 }
 
 createApp()
-
 
 
 // import { initCustomComponents } from './dom.js'

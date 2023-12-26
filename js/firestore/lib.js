@@ -3,6 +3,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 
 import { onAuthStateChanged,  getAuth, updateProfile, sendEmailVerification, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"
 
+
 import {
   writeBatch,
   doc,
@@ -29,32 +30,68 @@ const firebaseApp = initializeApp(firebaseConfig)
 const database = getFirestore(firebaseApp)
 const firestoreAuth = getAuth()
 
+export const register = async ({
+  email,
+  password
+})=>{
+  return await createUserWithEmailAndPassword(getAuth(), email, password)
+    .then((userCredential) => {
+      const user = userCredential.user;
+      return userCredential
+    })
+    .catch((error) => {
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      return error
+    });
+}
+
+export const login = async ({
+  email, password
+})=>{
+  return await signInWithEmailAndPassword(getAuth(), email, password)
+    .then((userCredential) => {
+      // Signed in 
+      const user = userCredential.user;
+      return user
+    })
+    .catch((error) => {
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      console.log(222, error)
+      return { errors: [{ message: error.message}] }
+    });
+}
+
 export function watchAuth(fn) {
-  const auth = getAuth()
-  onAuthStateChanged(auth, user => {
+  onAuthStateChanged(getAuth(), user => {
     fn(user)
   })
 }
 
-export function logOut(){
-  const auth = getAuth();
-  signOut(auth).then(() => {
-    // Sign-out successful.
+export function logout(onSignOut){
+  signOut(getAuth()).then(() => {
+    typeof onSignOut === 'function' && onSignOut()
   }).catch((error) => {
     // An error happened.
   });
 }
 
+export function getUser(){
+  const auth = getAuth()
+  return auth.currentUser
+}
+
 export async function addFireDoc(collectionName, data) {
-  const userStore = useUserStore()
+  const currentUser = getUser()
+
+  if(!currentUser.uid) return
 
   const newValue = {
     created: Timestamp.fromDate(new Date()),
-    creator: userStore.userData?.id || "anonymus",
+    creator: currentUser.uid || "anonymus",
     ...removeUndefined(data)
   }
-
-  console.log(newValue)
 
   const docRef = await addDoc(collection(database, collectionName), newValue)
   console.log("Fire created", collectionName, newValue)

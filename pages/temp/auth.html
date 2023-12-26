@@ -1,0 +1,141 @@
+<div class="flex bg-black  items-start justify-center bg-grey-200">
+	<div>
+		<div class="text-red-400" data-list="authList">
+			<div 
+				data-class="checkListClass">
+				<div 
+					data-click="onCheckListClick" 
+					>{title}</div>
+				<div>{name.text}</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="p-12 text-white gap-4 flex flex-col">
+		<app-title data-show="getShownTitle" data-class="getTitleClass">
+			<div>Authorization</div> 
+			<div>{creds.admin}</div>
+		</app-title>
+
+		<div class="text-black flex flex-col gap-4">
+			<app-input data-class="classes.email" data-model="credentials.email">
+				<div class="py-2" data-show="errors.email">{errors.email}</div>
+			</app-input>
+			<app-input data-class="classes.password" data-model="credentials.password">
+				<div class="py-2" data-show="errors.password">{errors.password}</div>
+			</app-input>	
+		</div>
+		<app-button-action data-click="onButtonClick"><span>Enter</span></app-button-action>
+	</div>
+<div>
+
+<script>
+$spa.initCustomElement({
+	name: 'page-auth',
+	attrs: [
+		'credentials', 
+		'errors', 
+		'classes', 
+		'auth-list', 
+		'creds'
+	],
+});
+
+const { element, proxy } = $spa.getRoots($componentId)
+
+proxy.credentials = {
+	email: 'ssta',
+	password: 'asr',
+}
+
+proxy.errors = {}
+proxy.classes = {}
+
+proxy.authList = [
+	{
+		title: 'September',
+		color: 'green',
+		name: {
+			text: 'very'
+		}
+	},
+	{
+		title: 'November',
+		color: 'blue'
+	}
+]
+
+
+setTimeout(()=>{
+	proxy.authList = [...proxy.authList, {
+		title: 'December'
+	}]
+},2000)
+
+// setTimeout(()=>{
+// 	proxy.authList.push({
+// 		title: 'arctic'
+// 	})
+// },3000)
+
+$spa.bindStore('auth',{
+	creds: 'creds'
+})
+
+$spa.watch('mountedComponent', ()=> {
+	const input = document.body.querySelector('app-input')
+	input.proxy.value = 'Blahasas'
+})
+
+proxy.getShownTitle = ()=>{
+	return Object.keys(proxy.errors).length  
+}
+
+proxy.getTitleClass = ()=>{
+	return `p-[${100 * Math.random() + 'px'}]` 
+}
+
+$spa.watch('credentials', (value)=> {
+	validate(value)
+})
+
+proxy.checkListClass = (index)=>{
+	//console.log(9999999 + '---------->', index)
+	const item = proxy.authList[index]
+	console.log(index, item)
+	return `text-bold text-[${((index + 7) *1.2)}px] text-${item?.color}-300`
+}
+
+function validate(value){
+	const errors = {}
+	const classes = {}
+	const { password, email} = proxy.credentials
+
+	if(password?.length < 5) {
+		errors.password = 'min length 5'
+		classes.password = 'text-red-300'
+
+	}
+	if(email?.length < 5) {
+		errors.email = 'min length 5'
+		classes.email = 'text-red-300'
+
+	}
+	proxy.errors = errors
+	proxy.classes = classes
+}
+
+
+function onButtonClick(){
+	validate(proxy.credentials)
+}
+
+
+function onCheckListClick(event, data){
+	if(!event) return
+	const index = parseInt(event.target.dataset.listIndex)
+	const current = proxy.authList[index]
+	proxy.authList[index] = { ...current, title: 2222}
+}
+
+</script>

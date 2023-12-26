@@ -50,12 +50,13 @@ export async function initCustomComponents(target=null,folder="components"){
 
 		if(script) { 
 			script.setAttribute('id', componentId)
-			loadjs(script.textContent, componentId, name)
+			loadjs(script, componentId, name)
 		}
 	}, target)
 }
 
 function getScriptString(script, id, componentName){
+	let scriptTextContent = script.textContent
   const handlerNames = []
   const template = document.getElementById('template-app-'+componentName)
   if(template) {
@@ -79,28 +80,30 @@ function getScriptString(script, id, componentName){
 	})
   ` : ''
 
-  const storeString = `
-	$spa.bindStore($componentId, proxy, 'auth', {
-		profile: 'profile'
-	})
+  const isModule = script.getAttribute('type') === 'module'
+
+  const storeStrIndex = scriptTextContent.indexOf('$spa.bindStore(')
+  if(storeStrIndex !== -1) {
+  	scriptTextContent = scriptTextContent.splice(storeStrIndex, '$spa.bindStore('.length, `$spa.bindStore($componentId, ${isModule ? '$proxy' : 'proxy'}, `)
+  }
+
+  const watcherStrIndex = scriptTextContent.indexOf('$spa.watch(')
+  if(watcherStrIndex !== -1) {
+  	scriptTextContent = scriptTextContent.replaceAll('$spa.watch(', '$spa.watch($componentId, ')
+  }
+
+
+  const pattern = /\$spa\.initCustomElement\(\{[\s\S]*\}\)\;\n/gim
+	const result = pattern.exec(scriptTextContent)
+	scriptTextContent = scriptTextContent.splice(pattern.lastIndex, 0, '\nconst { proxy: $proxy, element: $element } = $spa.getRoots($componentId)')
+
+  let stringScript = `
+    const $componentId = '${id}';
+  	${scriptTextContent} 
+  	${handlersString}
   `
 
-  const storeStrIndex = script.indexOf('$spa.bindStore(')
-  if(storeStrIndex !== -1) {
-  	script = script.splice(storeStrIndex, '$spa.bindStore('.length, '$spa.bindStore($componentId, proxy, ')
-  }
-
-  const watcherStrIndex = script.indexOf('$spa.watch(')
-  if(watcherStrIndex !== -1) {
-  	script = script.replaceAll('$spa.watch(', '$spa.watch($componentId, ')
-  }
-
-
-  return `{ 
-  	const $componentId = '${id}'; 
-  	${script} 
-  	${handlersString}
-  }`; 
+  return isModule ? stringScript : `{${stringScript}}` ; 
 }
 
 function loadjs(script, id, componentName) {
@@ -110,7 +113,12 @@ function loadjs(script, id, componentName) {
   var js = document.createElement("script");
   js.setAttribute('id', id)
 
+  if(script.getAttribute('type') === 'module') {
+  	js.setAttribute('type', 'module')
+  }
+
   js.textContent = getScriptString(script, id, componentName)
+
   document.head.appendChild(js);
 }
 
@@ -144,19 +152,19 @@ async function runPage(){
 
 }	
 
-async function loadPage(){
-	const path = location.hash.slice(1)
-	const { innerHtml, script } = await getComponent(path, 'pages')
-	const viewContainer = document.querySelector('[data-view]')
-	if(!innerHtml || !viewContainer) return
-	viewContainer.replaceChildren(innerHtml)
+// async function loadPage(){
+// 	const path = location.hash.slice(1)
+// 	const { innerHtml, script } = await getComponent(path, 'pages')
+// 	const viewContainer = document.querySelector('[data-view]')
+// 	if(!innerHtml || !viewContainer) return
+// 	viewContainer.replaceChildren(innerHtml)
 
-	if(script) {
-		await loadjs(script.textContent, getDataAttr(innerHtml))
-	}
+// 	if(script) {
+// 		await loadjs(script, getDataAttr(innerHtml))
+// 	}
 
-	await initCustomComponents(viewContainer)
-}	
+// 	await initCustomComponents(viewContainer)
+// }	
 
 
 
@@ -190,36 +198,36 @@ function loadStyle(style, path){
 }
 
 
-async function getComponent(componentName, folder='components'){
-	if(componentName.includes('page')) {
-		componentName = componentName.split('-')[1]
-	}
+// async function getComponent(componentName, folder='components'){
+// 	if(componentName.includes('page')) {
+// 		componentName = componentName.split('-')[1]
+// 	}
 
-	let path = `../${folder}/${componentName}.html`
-	let template = null
+// 	let path = `../${folder}/${componentName}.html`
+// 	let template = null
 
-	if(fetchedComponents[path]) {
-		template = fetchedComponents[path]
-	}
+// 	if(fetchedComponents[path]) {
+// 		template = fetchedComponents[path]
+// 	}
 
-	if(!template) {
-		template = await fetch(path)
-			.then(res=>res.text()).then((res)=>res)
-		const noResponse = template.includes('Not Found');
-		if(!noResponse && template) {
-		 	fetchedComponents[path] = template
-		} 
+// 	if(!template) {
+// 		template = await fetch(path)
+// 			.then(res=>res.text()).then((res)=>res)
+// 		const noResponse = template.includes('Not Found');
+// 		if(!noResponse && template) {
+// 		 	fetchedComponents[path] = template
+// 		} 
 
-		if(noResponse) {
-			template = null
-		}
+// 		if(noResponse) {
+// 			template = null
+// 		}
 
-		fetchedComponents[path] = template
+// 		fetchedComponents[path] = template
 
-	}
+// 	}
 
-	return getTemplate(template, path)
-}
+// 	return getTemplate(template, path)
+// }
 
 
 async function fetchTemplate(componentName, folder){
@@ -238,7 +246,7 @@ async function fetchTemplate(componentName, folder){
 			path = getPath(folder, componentName.split('-').join('/'))
 			const { noResponse: nr, template: tp } = await fetchPath(path)
 			if(nr) {
-				noResponse = ns
+				noResponse = nr
 			} else {
 				template = tp
 			}
@@ -260,8 +268,6 @@ async function fetchPath(path){
 		const template = await fetch(path)
 			.then(res=>res.text()).then((res)=>res)
 		const noResponse = template.includes('Not Found');
-
-		console.log(path, noResponse)
 
 		if(noResponse) {
 			return { template: null, noResponse }

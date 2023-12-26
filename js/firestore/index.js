@@ -14,4 +14,6 @@ async function getCities() {
   console.log(cityList)
   return cityList;
 }
+
+
 getCities()

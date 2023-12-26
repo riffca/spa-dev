@@ -1,8 +1,9 @@
 <div class="bg-blue-200">
+	<div>{chat.email}</div>
 	<div data-list="chatMessages">
 		<div>
-			<div class="getMessageClass">{text}</div>
-			<div class="getMessageClass">{icon}</div>	
+			<div data-class="getMessageClass">{text}</div>
+			<div data-class="getMessageClass">{author}</div>	
 		</div>
 	</div>
 
@@ -10,39 +11,73 @@
 	<app-button-action data-click="onSendClick">Send</app-button-action>
 </div>
 
-<script>
+<script type="module">
+import { getFireSnapshot, addFireDoc, getUser } from './js/firestore/lib.js'
+
+const messagesStore = {}
+
 $spa.initCustomElement({
 	name: 'chat',
-	attrs: ['chat-messages', 'input-value'],
-	events: ['input'],
+	attrs: ['chat-messages', 'input-value', 'chat'],
+});
+
+const chatsStore = $spa.bindStore('chats',{
+	userChats: 'userChats'
 })
 
-const { element, proxy } = $spa.getRoots($componentId)
+const buildName = (data)=>{
+	const item = chatsStore.userChats.find(item=>item.id === data.creator)
+	if(item){
+		data.author = item.email
+	}
+	return data
+}
 
-proxy.inputValue = ''
 
-const getChatMessages = () => {
-	return [
-		{ text: 'new text', icon: 'blue' },
-		{ text: 'new text' },
-		{ text: 'new text' }
-	]
+$spa.watch('chat', ()=>{
+	const val = $proxy.chat
+	if(!val?.id) return
+
+	if(!messagesStore[val.id]) {
+		messagesStore[val.id] = []
+		$proxy.chatMessages = []
+		getFireSnapshot('messages',  [['chat', '==', val.id]], { 
+			add: (data)=> {
+				messagesStore[val.id].push(buildName(data))
+				$proxy.chatMessages.push(buildName(data))
+			} 
+		})
+	} else {
+		$proxy.chatMessages = [...messagesStore[val.id]]
+	}
+})
+
+$proxy.inputValue = ''
+$proxy.chat = ''
+$proxy.getMessageClass = (index)=>{
+	if(!index) return
+ 	const message = $proxy.chatMessages[parseInt(index)]
+
+	const classList = ['flex']
+	if(message.creator === getUser().uid) {
+		classList.push('justify-end')
+	} else {
+		classList.push('justify-start')
+	}
+	return classList.join(' ')
 }
 
 function onSendClick(){
-	proxy.chatMessages.push({
-		text: proxy.inputValue
+	const members = {
+		[$proxy.chat.id]: true,
+		[getUser().uid]: true,
+	}
+
+	addFireDoc('messages',{
+		chat: $proxy.chat.id,
+		text: $proxy.inputValue,
+		type: 'user', // room, group, entity
+		members
 	})
 }
-
-proxy.getMessageClass = (index)=>{
-	const message = proxy.chatMessages[index]
-	return message?.text
-}
-
-async function init(){
-	proxy.chatMessages = getChatMessages()
-}
-
-init()
 </script>
