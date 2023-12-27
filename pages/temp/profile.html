@@ -1,0 +1,45 @@
+
+<div class="profile">
+	<div>Profile</div>
+	<app-profile></app-profile>
+	<div>
+		<app-button text="Hello"></app-button>
+		<app-button><div>Purchase</div></app-button>
+	</div>
+	<app-logo></app-logo>
+</div>
+<script>
+
+const componentId = document.currentScript.id
+
+const component = $spa.initCustomElement({
+	name: 'page-profile',
+	componentId,
+	attrs: ['text'],
+});
+
+
+const vm = $spa.bindCustomComponent(component,{
+	getName(){
+		return vm.text + '   ' + vm.icon
+	},
+	click(event){
+		console.log('Click profile', componentId)
+	},
+	init(proxy){
+		proxy.text = null
+	}
+})
+
+
+setTimeout(()=>{
+	vm.text = 'new texxt'
+},3000)
+
+</script>
+<style>
+
+.profile {
+	background: red;
+}
+</style>

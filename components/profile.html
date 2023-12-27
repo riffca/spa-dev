@@ -1,28 +1,32 @@
 <div class="flex gap-4">
 	<img class="w-16" data-src="profileImage">
-	<div >
-		<div class="text-xl p-2 cursor-pointer" data-click="onProfileClick">
-			{profileName}
+	<img class="w-16" data-src="profile.avatar">
+	<div data-click="onProfileClick">
+		<div class="text-xl p-2 cursor-pointer">
+			{profile.username}
 		</div>
-		<div>{role}</div>
+		<div>{profile.email}</div>
 	</div>
 </div>
-<script>
+<script type="module">
+import { loadProfile } from './js/store/auth.js'
+
 $spa.initCustomElement({
 	name: 'profile',
-	attrs: ['profile-name', 'role', 'profile-image'],
+	attrs: ['profile', 'role', 'profile-image'],
 });
 
-const { element, proxy } = $spa.getRoots($componentId)
-
-const store = $spa.bindStore('auth', {
-	profileName: 'profile'
+const authStore = $spa.bindStore('auth', {
+	profile: 'profile'
 })
 
-proxy.profileImage = `https://robohash.org/${Math.random()}.png`
+$proxy.profileImage = `https://robohash.org/${Math.random()}.png`
+
+$spa.watch('profile',()=>{
+	console.log(2333,$proxy.profile)
+})
 
 function onProfileClick(){
-   proxy.role = 'administrator'
-   store.profile = 'next profile'
+   alert(1)
 }
 </script>

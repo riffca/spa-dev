@@ -12,14 +12,14 @@ export const definedCustomComponents = {}
 export const definedHandlers = {}
 
 
-export function addEventListener(target, event, handler) {
+export function addEventListener(target, event, handler, options) {
 	if(listenersByHandlers.get(handler)) return
 	if(listeners.get(target) === event) return
  
 	if (!target) return
 
 
-	target.addEventListener(event, handler)
+	target.addEventListener(event, handler, options)
 
 	listeners.set(target, event)
 	listenersByHandlers.set(handler, target)
@@ -177,7 +177,7 @@ export function initCustomElement({
 						this.initInputEvents()
 					}
 
-				})
+				}, { capture: true})
 
 			}
 
@@ -484,7 +484,7 @@ function updateHidden(target, object) {
 }
 
 function updateDatasetAttrs(component, object) {
-	const attributes = ['class', 'src', 'href', 'value'].map(item=>`[data-${item}]`).join(',')
+	const attributes = ['class', 'src', 'href', 'value','label'].map(item=>`[data-${item}]`).join(',')
 	interateBySelector(component, attributes, (element)=>{
 		//element.dataset.class && element.dataset.class && console.log('index', element, element.dataset.listIndex)
 		updateAttrsTemplates(element, object, component.proxy, element.dataset.listIndex) 
@@ -625,11 +625,6 @@ function updateAttrsTemplates(component, object, proxy=null, index=null) {
 		Object.keys(dataset).forEach(key=>{ 
 			const attr = dataset[key].split('.')[0]
 			if(proxy[attr]) {
-				// if(key === 'class'){
-				//  	console.log(111111,attr)
-				//  	console.log(index)
-				//  	console.log(proxy[attr])
-				// }
 				component.setAttribute(key, `{${dataset[key]}}`.template(proxy, index))
 			}
 		})
@@ -643,15 +638,15 @@ function interateBySelector(component, selector, cb){
 	})
 }
 
-function runHandlers(target) {
-	const components = target.querySelectorAll('*');
-	const componentId = target.dataset.init;
-	[...components].forEach(component=>{
-		if(component.dataset.click) {
-			definedHandlers[componentId][component.dataset.click]()
-		}
-	})
-}
+// function runHandlers(target) {
+// 	const components = target.querySelectorAll('*');
+// 	const componentId = target.dataset.init;
+// 	[...components].forEach(component=>{
+// 		if(component.dataset.click) {
+// 			definedHandlers[componentId][component.dataset.click]()
+// 		}
+// 	})
+// }
 
 function checkHasParentList(component){
 	if(!component.parentElement) return false
@@ -660,9 +655,20 @@ function checkHasParentList(component){
 
 }
 
+const getParentNodeWithClick = (node)=>{
+	if(!node.parentElement) return false
+	if(node.dataset.click && node.parentElement.dataset.parent === node.dataset.parent) return node
+	return getParentNodeWithClick(node.parentElement)
+}
+
 function runHandler(componentId, event, root=null) {
 	let component = event.target
+
 	if(checkHasParentList(component)) return
+
+	// if(getParentNodeWithClick(component)) {
+	// 	component = getParentNodeWithClick(component)
+	// }
 
 	if(root) {
 		componentId = root.parentElement.dataset.parent || root.parentElement.dataset.init

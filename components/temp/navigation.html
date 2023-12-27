@@ -1,0 +1,47 @@
+<div class="flex gap-2">
+	<div data-list="navList">
+		<a data-href="src" data-title="title">{title}</a>
+	</div>
+</div>
+<script>
+
+const componentId = document.currentScript.id
+
+const component = $spa.initCustomElement({
+	name: 'navigation',
+	componentId,
+	attrs: ['nav-list']
+});
+
+const InterLogo = $spa.bindCustomComponent(component,{
+	async click(event){
+		console.log('Click navigation', componentId)
+	},
+	init(proxy){
+		proxy.navList = [
+			{
+		 		src: '#profile',
+		 		title: 'Profile'
+			},
+			{
+		 		src: '#auth',
+		 		title: 'Auth'
+			},
+			{
+		 		src: '#chat',
+		 		title: 'Chat'
+			}
+		]
+
+	}
+})
+
+setTimeout(()=>{
+		InterLogo.navList.push({
+		 		src: '#lazy',
+		 		title: 'Lazy'
+			}) 
+
+		console.log(InterLogo.navList)
+		},2000)
+</script>

@@ -11,7 +11,13 @@ import { getFireSnapshot } from './js/firestore/lib.js'
 getFireSnapshot('profile',[],{
 	add(data){
 		$proxy.users.push(data)
-	}
+	},
+	modified(data) {
+		const currentUser = $proxy.users.findIndex(item.id === data.id)
+		if(index !== -1) {
+			$proxy.users[index] = data
+		}
+	},
 })
 
 $spa.initCustomElement({

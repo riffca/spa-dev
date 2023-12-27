@@ -1,8 +1,8 @@
-<div class="h-full">
-	<app-header>
-		<div>Hello</div>
+<div class="h-[100vh] overlow-hidden flex flex-col">
+	<app-header class="shrink-0">
+		<div>Has</div>
 	</app-header>
-	<div class="header-slot w-full h-full" data-slot>
+	<div class="grow-1 header-slot w-full h-full overflow-y-auto" data-slot>
 	</div>
 </div>
 <style>
@@ -12,19 +12,11 @@
 }
 </style>
 <script>
-	
 const componentId = document.currentScript.id
-
-const component = $spa.initCustomElement({
+$spa.initCustomElement({
 	name: 'layout',
 	componentId,
-	classes: 'h-full',
+	//classes: 'h-full',
 	attrs: ['sections'],
-	change(target, prop, value){
-		console.log(prop)
-		if(prop === 'sections'){
-			console.log(prop)
-		}
-	}
 });
 </script>

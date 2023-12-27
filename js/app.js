@@ -1,21 +1,18 @@
 import './spa.js' 
-import { watchAuth } from './firestore/lib.js'
 
 import { runApp } from './dom.js'
 
+const stores = {}
+
 async function loadStores() {
     for (const value  of [ 'auth', 'chats']) {
-        const store = await import(`./store/${value}.js`)
-        store.init()
+       stores[value]= await import(`./store/${value}.js`)
+       stores[value].init()
     }
 }
 
 async function createApp(){
     await loadStores()
-
-    watchAuth((value)=>{
-        console.log('auth watch',value)
-    })
 
     runApp()
 }

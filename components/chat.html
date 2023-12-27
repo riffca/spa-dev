@@ -1,14 +1,17 @@
-<div class="bg-blue-200">
-	<div>{chat.email}</div>
-	<div data-list="chatMessages">
-		<div>
-			<div data-class="getMessageClass">{text}</div>
-			<div data-class="getMessageClass">{author}</div>	
+<div class="bg-blue-200 h-full">
+	<div class="grow-1">{chat.email}</div>
+	<div class="">
+		<div class="shrink-0" data-list="chatMessages">
+			<div>
+				<div data-class="getMessageClass">{text}</div>
+				<div data-class="getMessageClass">{author}</div>	
+			</div>
+		</div>
+		<div class="grow-1 gap-4">
+			<input data-value="inputValue" />
+			<app-button-action data-click="onSendClick">Send</app-button-action>	
 		</div>
 	</div>
-
-	<input data-value="inputValue" />
-	<app-button-action data-click="onSendClick">Send</app-button-action>
 </div>
 
 <script type="module">
@@ -34,14 +37,17 @@ const buildName = (data)=>{
 }
 
 
+const chatsListeners = {}
+
 $spa.watch('chat', ()=>{
 	const val = $proxy.chat
 	if(!val?.id) return
 
 	if(!messagesStore[val.id]) {
+		if(chatsListeners[val.id]) return
 		messagesStore[val.id] = []
 		$proxy.chatMessages = []
-		getFireSnapshot('messages',  [['chat', '==', val.id]], { 
+		chatsListeners[val.id] = getFireSnapshot('messages',  [['chat', '==', val.id]], { 
 			add: (data)=> {
 				messagesStore[val.id].push(buildName(data))
 				$proxy.chatMessages.push(buildName(data))

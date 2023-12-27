@@ -19,8 +19,12 @@ import {
   deleteDoc,
   limit,
   getFirestore, 
-  orderBy 
+  orderBy,
+  documentId
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
+
+
+export const getIdKey = ()=> documentId()
 
 const useUserStore = ()=>({userData})
 
@@ -80,6 +84,10 @@ export function logout(onSignOut){
 export function getUser(){
   const auth = getAuth()
   return auth.currentUser
+}
+
+export function getUserId(){
+  return getUser()?.uid
 }
 
 export async function addFireDoc(collectionName, data) {

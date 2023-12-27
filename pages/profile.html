@@ -1,41 +1,75 @@
 
 <div class="profile">
-	<div>Profile</div>
-	<app-profile></app-profile>
-	<div>
-		<app-button text="Hello"></app-button>
-		<app-button><div>Purchase</div></app-button>
+	<div class="text-[2rem] text-center p-3 font-bold">Profile</div>
+	<!-- <app-profile></app-profile> -->
+	<div class="grid grid-cols-2 justify-items-center">
+		<div>
+			<app-input
+				data-label="profileLabels.username"
+				data-model="profileInternal.username"></app-input>
+		
+			<app-input
+				data-label="profileLabels.avatar"
+				data-model="profileInternal.avatar"></app-input>		
+			<app-button-action class="m-4" data-click="onUpdateClick">Update</app-button-action>
+		</div>
+		
+		<div>
+			<img class="w-[20vw]" data-src="profileInternal.avatar" />
+		</div>
 	</div>
-	<app-logo></app-logo>
 </div>
-<script>
+<script type="module">
+import { setFireDoc, getFireSnapshot, getUserId, getIdKey } from './js/firestore/lib.js'
 
-const componentId = document.currentScript.id
-
-const component = $spa.initCustomElement({
+//https://imgupscaler.com/images/samples/animal-after.webp
+$spa.initCustomElement({
 	name: 'page-profile',
-	componentId,
-	attrs: ['text'],
+	attrs: ['profile', 'profile-labels', 'profile-internal'],
 });
 
 
-const vm = $spa.bindCustomComponent(component,{
-	getName(){
-		return vm.text + '   ' + vm.icon
-	},
-	click(event){
-		console.log('Click profile', componentId)
-	},
-	init(proxy){
-		proxy.text = null
-	}
+const authStore = $spa.bindStore('auth',{
+	profile: 'profile'
 })
 
+let hasListener = false
 
-setTimeout(()=>{
-	vm.text = 'new texxt'
-},3000)
+$spa.watch('profile',()=>{
+	if(authStore.profile && getUserId() && !hasListener){
+		hasListener = true
+		getFireSnapshot('profile', [[getIdKey(), "==", getUserId() ]],{
+			add(item){
+				console.log(item)
+				$proxy.profileInternal = item
+				$proxy.profile = item
+				authStore.profile = item
+			},
+			modified(item){
+				$proxy.profileInternal = item
+				$proxy.profile = item
+				authStore.profile = item
+			}
 
+		})
+	}
+}, true)
+
+
+$proxy.profileInternal = {
+	username: '',
+	avatar: ''
+}
+
+$proxy.profileLabels = {
+	username: 'Enter username',
+	avatar: 'Set avatar link',
+}
+
+
+function onUpdateClick(){
+	setFireDoc('profile', getUserId(),$proxy.profileInternal)
+}
 </script>
 <style>
 

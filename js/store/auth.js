@@ -1,28 +1,27 @@
 import { createStore } from '../store.js'
-import { register, setFireDoc } from '../firestore/lib.js'
+import { register, getFireDocById, getUserId } from '../firestore/lib.js'
 
+import { watchAuth } from '../firestore/lib.js'
+
+let authStore
 
 export function init(){
 
-    const authStore = createStore('auth')
+    authStore = createStore('auth')
+    authStore.profile  = {}
 
-    authStore.profile = 'well'
-    authStore.creds = {
-        admin: true,
-        reporter: false,
-    }
-
-
-    setTimeout(()=>{
-        authStore.profile = 'pleasure'
-    },3000)
-
-    setTimeout(()=>{
-        authStore.profile = 'riffca'
-        const creds = authStore.creds
-        authStore.creds = { ...creds, admin: false }
-    },3000)
+    watchAuth((value)=>{
+        authStore.profile.email = value.email
+        getUserId() && loadProfile(getUserId())
+        console.log('auth watch', value)
+    })
 }
+
+export async function loadProfile(id){
+    const doc = await getFireDocById('profile',id)
+    authStore.profile = doc
+}
+
 export async function registerUser({email, password}){
     const result  = await register({
         email,
@@ -31,6 +30,6 @@ export async function registerUser({email, password}){
 
     if(result.errors) return result.errors
 
-    console.log(233, result)
+    // console.log(233, result)
     setFireDoc('profile', result.user.uid, { email })
 }
