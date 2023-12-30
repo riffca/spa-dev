@@ -1,5 +1,5 @@
 <div class="bg-blue-200 h-full">
-	<div class="grow-1">{chat.email}</div>
+	<div class="grow-1">{chat.id}</div>
 	<div class="">
 		<div class="shrink-0" data-list="chatMessages">
 			<div>
@@ -7,7 +7,7 @@
 				<div data-class="getMessageClass">{author}</div>	
 			</div>
 		</div>
-		<div class="grow-1 gap-4">
+		<div class="sticky bottom-0 grow-1 gap-4">
 			<input data-value="inputValue" />
 			<app-button-action data-click="onSendClick">Send</app-button-action>	
 		</div>
@@ -16,26 +16,30 @@
 
 <script type="module">
 import { getFireSnapshot, addFireDoc, getUser } from './js/firestore/lib.js'
+import { sendMessage, chatsStore } from './js/store/chats.js'
 
 const messagesStore = {}
 
 $spa.initCustomElement({
 	name: 'chat',
-	attrs: ['chat-messages', 'input-value', 'chat'],
+	attrs: ['chat-messages', 'input-value', 'chat', 'get-chat-title'],
 });
 
-const chatsStore = $spa.bindStore('chats',{
-	userChats: 'userChats'
-})
-
 const buildName = (data)=>{
-	const item = chatsStore.userChats.find(item=>item.id === data.creator)
-	if(item){
-		data.author = item.email
-	}
+	// const item = chatsStore.userChats.find(item=>item.id === data.creator)
+	// if(item){
+	// 	data.author = item.email
+	// }
+	// return data
+
+	data.author = data.creator
 	return data
 }
 
+$proxy.getChatTitle = ()=>{
+	console.log(chatsStore.currentChat)
+	return chatsStore.currentChat.email
+}
 
 const chatsListeners = {}
 
@@ -47,7 +51,7 @@ $spa.watch('chat', ()=>{
 		if(chatsListeners[val.id]) return
 		messagesStore[val.id] = []
 		$proxy.chatMessages = []
-		chatsListeners[val.id] = getFireSnapshot('messages',  [['chat', '==', val.id]], { 
+		chatsListeners[val.id] = getFireSnapshot('messages',  [['chat', '==', val.id]],{ 
 			add: (data)=> {
 				messagesStore[val.id].push(buildName(data))
 				$proxy.chatMessages.push(buildName(data))
@@ -60,6 +64,7 @@ $spa.watch('chat', ()=>{
 
 $proxy.inputValue = ''
 $proxy.chat = ''
+
 $proxy.getMessageClass = (index)=>{
 	if(!index) return
  	const message = $proxy.chatMessages[parseInt(index)]
@@ -74,16 +79,13 @@ $proxy.getMessageClass = (index)=>{
 }
 
 function onSendClick(){
-	const members = {
-		[$proxy.chat.id]: true,
-		[getUser().uid]: true,
-	}
+	if(!$proxy.chat || !$proxy.chat.id) return
 
-	addFireDoc('messages',{
+	sendMessage({
 		chat: $proxy.chat.id,
 		text: $proxy.inputValue,
 		type: 'user', // room, group, entity
-		members
+		to: Object.keys($proxy.chat.members),
 	})
 }
 </script>

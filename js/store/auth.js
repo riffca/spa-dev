@@ -1,18 +1,18 @@
 import { createStore } from '../store.js'
 import { register, getFireDocById, getUserId } from '../firestore/lib.js'
-
+import { loadFriends } from './users.js'
 import { watchAuth } from '../firestore/lib.js'
 
-let authStore
+export const authStore = createStore('auth')
 
 export function init(){
 
-    authStore = createStore('auth')
     authStore.profile  = {}
+    authStore.getUserId = ()=> getUserId()
 
     watchAuth((value)=>{
-        authStore.profile.email = value.email
-        getUserId() && loadProfile(getUserId())
+        authStore.profile = value
+        getUserId() && loadProfile(getUserId()) && loadFriends(getUserId())
         console.log('auth watch', value)
     })
 }

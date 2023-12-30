@@ -368,8 +368,19 @@ export function bindProxy(selector, extender, options) {
 	return wrap
 }
 
+function getTemplateValue(text, object, index=null, proxy=null){
+	let insertText = text.template(object, index)
+	if(!insertText) {
+		insertText = text.template(proxy, index)
 
-function updateTemplates(target, object, index=null){
+		console.log(text, proxy)
+	}
+	return insertText
+}
+
+
+function updateTemplates(target, object, index=null, proxy=null){
+	proxy = target.proxy || proxy
 	index = target.dataset.listIndex || index
 	//console.log(index, target)
 
@@ -392,7 +403,8 @@ function updateTemplates(target, object, index=null){
 		  			if(renderText.includes(key)) {
 		  				if(object[key] === undefined) return
 		  				if(object[key] === null) return
-		  				currentNode.textContent = renderText.template(object, index)
+		  				//currentNode.textContent = renderText.template(object, index)
+		  				currentNode.textContent = getTemplateValue(renderText, object, index, proxy)
 		  			}
 		  		})
 		  	}
@@ -405,7 +417,9 @@ function updateTemplates(target, object, index=null){
 		  			if(!parent.hasAttribute('data-render')) {
 		  				parent.setAttribute('data-render', parent.textContent.slice())
 		  			}
-		  			parent.textContent = value.template(object, index)
+		  			//parent.textContent = value.template(object, index)
+		  			parent.textContent = getTemplateValue(value, object, index, proxy)
+
 	
 				}	
 		  	}
@@ -423,24 +437,39 @@ function setupLists(target, object) {
 			if(key === listKey) {
 				const list = object[key]
 				const tempWrap = []
-				list.forEach((item, index)=>{
+				list.forEach(async (item, index)=>{
 					const template = target.listTemplates[listKey].cloneNode(true);
 					template.setAttribute('data-list-index', index);
-					updateTemplates(template, item, index);
+
+
+					updateTemplates(template, item, index, target.proxy);
 					//console.log('aaaaaaa', index);
 
-					const childNodes = template.querySelectorAll('*');
-					[...childNodes].forEach((child)=>{
-						child.setAttribute('data-list-index', index);
-						updateAttrsTemplates(child, item, target.proxy)
+					// const childNodes = template.querySelectorAll('*');
+					// [...childNodes].forEach((child)=>{
+					// 	child.setAttribute('data-list-index', index);
+					// 	updateAttrsTemplates(child, item, target.proxy)
+					// 	if(child.dataset.click) {
+					// 		const handler = (event)=>{
+					// 			definedHandlers[target.dataset.init][child.dataset.click](event, item)
+					// 		}
+					// 		addEventListener(child, 'click', handler)
+					// 	}	
+					// });
 
-						if(child.dataset.click) {
-							const handler = (event)=>{
-								definedHandlers[target.dataset.init][child.dataset.click](event, item)
-							}
-							addEventListener(child, 'click', handler)
-						}	
-					});
+					initCustomComponents(template).then(()=>{
+						const childNodes = template.querySelectorAll('*');
+						[...childNodes].forEach((child)=>{
+							child.setAttribute('data-list-index', index);
+							updateAttrsTemplates(child, item, target.proxy)
+							if(child.dataset.click) {
+								const handler = (event)=>{
+									definedHandlers[target.dataset.init][child.dataset.click](event, item)
+								}
+								addEventListener(child, 'click', handler)
+							}	
+						});
+					})
 
 					tempWrap.push(template)
 				})
@@ -489,12 +518,6 @@ function updateDatasetAttrs(component, object) {
 		//element.dataset.class && element.dataset.class && console.log('index', element, element.dataset.listIndex)
 		updateAttrsTemplates(element, object, component.proxy, element.dataset.listIndex) 
 	})
-	// interateBySelector(component, '[data-src]', (element)=>{
-	// 	updateAttrsTemplates(element, object) 
-	// })
-	// interateBySelector(component, '[data-value]', (element)=>{
-	// 	updateAttrsTemplates(element, { value: object.model}) 
-	// })
 }
 
 function loopKeys(){

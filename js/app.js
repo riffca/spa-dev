@@ -5,7 +5,7 @@ import { runApp } from './dom.js'
 const stores = {}
 
 async function loadStores() {
-    for (const value  of [ 'auth', 'chats']) {
+    for (const value  of [ 'auth', 'chats', 'users']) {
        stores[value]= await import(`./store/${value}.js`)
        stores[value].init()
     }

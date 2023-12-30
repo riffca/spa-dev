@@ -1,0 +1,65 @@
+<div class="bg-blue-200 h-full">
+	<div class="grow-1">{chat.email}</div>
+	<div class="">
+		<div class="shrink-0" data-list="chatMessages">
+			<div>
+				<div data-class="getMessageClass">{text}</div>
+				<div data-class="getMessageClass">{author}</div>	
+			</div>
+		</div>
+		<div class="sticky bottom-0 grow-1 gap-4">
+			<input data-value="inputValue" />
+			<app-button-action data-click="onSendClick">Send</app-button-action>	
+		</div>
+	</div>
+</div>
+
+<script type="module">
+import { getFireSnapshot, addFireDoc, getUser } from './js/firestore/lib.js'
+import { sendMessage, setupChatSnapshot } from './js/store/chats.js'
+
+$spa.initCustomElement({
+	name: 'chat',
+	attrs: ['chat-messages', 'input-value', 'chat', 'messages-by-chat'],
+});
+
+$proxy.inputValue = ''
+$proxy.chat = ''
+
+const chatsStore = $spa.bindStore('chats',{
+	messagesByChat: 'messagesByChat'
+})
+
+$spa.watch('messagesByChat',()=>{
+	$proxy.chatMessages = $proxy.messagesByChat[$proxy.chat?.id]
+})
+
+
+$spa.watch('chat', ()=>{
+	const val = $proxy.chat
+	if(!val?.id) return
+
+	setupChatSnapshot(val.id)
+})
+
+$proxy.getMessageClass = (index)=>{
+	if(!index) return
+ 	const message = $proxy.chatMessages[parseInt(index)]
+
+	const classList = ['flex']
+	if(message.creator === getUser().uid) {
+		classList.push('justify-end')
+	} else {
+		classList.push('justify-start')
+	}
+	return classList.join(' ')
+}
+
+function onSendClick(){
+	sendMessage({
+		to: [$proxy.chat.id],
+		chat: $proxy.chat.id,
+		text: $proxy.inputValue,
+	})
+}
+</script>

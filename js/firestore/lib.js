@@ -145,6 +145,33 @@ export async function getFireDocById(collection, id) {
   return convertDoc(newDoc)
 }
 
+function chunk (array, size) {
+  return array.reduce(function (res, item, index) {
+    if (index % size === 0) { res.push([]); }
+    res[res.length-1].push(item);
+    return res;
+  }, []);
+}
+
+export async function getFireDocsByIds(
+    collectionName, ids
+) {
+    // use lodash _.chunk, for example
+    const result = await Promise.all(
+        chunk(ids, 10).map(async (chunkIds) => {
+            const accounts = await getDocs(
+                query(
+                    collection(database, collectionName),
+                    where(documentId(), 'in', chunkIds)
+                ));
+            return accounts.docs.filter(doc => doc.exists()).map(doc => convertDoc(doc));
+        })
+    );
+
+
+    return result.flat(1);
+}
+
 export async function getFireDocs(
   collectionName,
   whereCond = null,

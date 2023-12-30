@@ -1,10 +1,6 @@
-<div class="flex min-h-full bg-purple-600">
-	<app-users></app-users>
-	
-	<div data-list="chats">
-		<div>{name}</div>
-		<div>{date}</div>
-	</div>
+<div class="flex h-full bg-purple-600">
+	<!-- <app-users class="abosolute bottom-0 left-0"></app-users> -->
+	<app-chats></app-chats>
 	<app-chat class="flex-1"></app-chat>
 <div>
 <script type="module">
@@ -15,12 +11,12 @@ $spa.initCustomElement({
 	],
 });
 
-const userRef = $element.querySelector('app-users')
+const userRef = $element.querySelector('app-chats')
 const chatsRef = $element.querySelector('app-chat')
 
 const clickUserHandler = (event)=>{
 	chatsRef.proxy.chat = event.value
 }
 
-$spa.addEventListener(userRef, 'clickuser', clickUserHandler)
+$spa.addEventListener(userRef, 'clickchat', clickUserHandler)
 </script>

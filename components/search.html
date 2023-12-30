@@ -1,0 +1,46 @@
+<label class="flex gap-4 items-center">
+	<span>search</span>
+	<input data-value="inputInternal" class="text-gray-500" data-header-input placeholder="search" />
+
+	<div data-show="resultsShown" data-list="results">
+		<div>
+			<div>{email}</div>
+			<app-button-action data-click="onProfileClick">Add friend</app-button-action>
+		</div>
+	</div>
+</label>
+<script type="module">
+import { loadProfile } from './js/store/auth.js'
+import { loadUsers } from './js/store/users.js'
+import { chatsStore, requestChat } from './js/store/chats.js'
+
+$spa.initCustomElement({
+	name: 'search',
+	attrs: ['input-internal', 'results'],
+});
+
+$proxy.inputInternal = ''
+
+const usersStore = $spa.bindStore('users', {
+	profiles: 'profiles'
+})
+
+$spa.watch('profiles',()=>{
+	$proxy.results = Object.values($proxy.profiles)
+})
+
+$spa.watch('inputInternal',()=>{
+	loadUsers($proxy.inputInternal.trim())
+})
+
+$proxy.resultsShown = ()=> $proxy.results?.length
+
+function onProfileClick(event){
+	const index = event.target.dataset.listIndex
+	const user = $proxy.results[index]
+
+	if(!user) return
+
+	requestChat(user.id)
+}
+</script>

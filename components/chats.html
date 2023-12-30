@@ -1,0 +1,49 @@
+<div>
+	<div data-list="chats">
+		<div data-click="onChatClick" class="cursor-pointer">
+			<div>{getChatName}</div>
+		</div>
+	</div>
+</div>
+<script type="module">
+import { setupUserChatsSnapshot } from './js/store/chats.js'
+import { authStore } from './js/store/auth.js'
+import { usersStore } from './js/store/users.js'
+import { chatsStore, setCurrentChat } from './js/store/chats.js'
+
+$spa.initCustomElement({
+	name: 'chats',
+	attrs: ['chats', 'get-chat-name'],
+	events: ['clickchat'],
+});
+
+$proxy.getChatName = (index)=> {
+	const item = $proxy.chats[index]
+	if(item){
+		return item.email || item.id
+	}
+}
+
+usersStore.watch('profiles',(val)=>{
+	const chats = chatsStore.userChats.map(item=>{
+		const apponent = Object.keys(item.members).filter(item=>item!==authStore.getUserId())
+
+		if(val[apponent]) {
+			item.email = val[apponent].email
+		}
+		return item
+
+	})
+	$proxy.chats = chats
+})	
+
+authStore.watch('profile',()=>{
+	setupUserChatsSnapshot()
+})
+
+function onChatClick(event){
+	const val = $proxy.chats[event.target.dataset.listIndex]
+	setCurrentChat(val)
+	$element.emit('clickchat', val)
+}
+</script>
