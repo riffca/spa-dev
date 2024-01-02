@@ -59,7 +59,13 @@ export async function loadFriends(userId){
 }
 
 export async function loadProfilesByIds(ids){
+    //let exists = {}
     if(Array.isArray(ids)) {
+        // ids.forEach(item=>{
+        //     exists[item] = usersStore.profiles[item]
+        // })
+        //const reqIds = Object.keys(exists).filter(key=>exists[key])
+        //if(reqIds.length === ids.length) return
         const docs = await getFireDocsByIds('profile', ids)
         docs.forEach(doc=>{
             usersStore.profiles[doc.id] = doc

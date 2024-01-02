@@ -15,5 +15,4 @@ async function getCities() {
   return cityList;
 }
 
-
 getCities()

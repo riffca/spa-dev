@@ -1,14 +1,14 @@
-<div class="bg-blue-200 h-full">
+<div class="bg-blue-200 h-full flex flex-col">
 	<div class="grow-1">{chat.id}</div>
-	<div class="">
-		<div class="shrink-0" data-list="chatMessages">
-			<div>
-				<div data-class="getMessageClass">{text}</div>
-				<div data-class="getMessageClass">{author}</div>	
+	<div class="shrink-0">
+		<div class="" data-list="chatMessages">
+			<div data-class="getMessageClass">
+				<div class="p-2">{text}</div>
+				<div class="text-bold">{author}</div>	
 			</div>
 		</div>
-		<div class="sticky bottom-0 grow-1 gap-4">
-			<input data-value="inputValue" />
+		<div class="sticky bottom-0 grow-1 gap-4 flex p-4 w-full ">
+			<input class="flex-1 bg-gray-200 border" data-value="inputValue" />
 			<app-button-action data-click="onSendClick">Send</app-button-action>	
 		</div>
 	</div>
@@ -16,7 +16,8 @@
 
 <script type="module">
 import { getFireSnapshot, addFireDoc, getUser } from './js/firestore/lib.js'
-import { sendMessage, chatsStore } from './js/store/chats.js'
+import { sendMessage, chatsStore, loadChatMessagesSorted } from './js/store/chats.js'
+import { usersStore, loadProfilesByIds } from './js/store/users.js'
 
 const messagesStore = {}
 
@@ -26,51 +27,58 @@ $spa.initCustomElement({
 });
 
 const buildName = (data)=>{
-	// const item = chatsStore.userChats.find(item=>item.id === data.creator)
-	// if(item){
-	// 	data.author = item.email
-	// }
-	// return data
-
-	data.author = data.creator
+	const item = usersStore.profiles[data.creator]
+	if(item){
+		data.author = item.username || item.email
+	}
 	return data
 }
 
+// usersStore.watch('profiles',(val)=>{
+// 	console.log(222, val)
+// })
+
 $proxy.getChatTitle = ()=>{
-	console.log(chatsStore.currentChat)
 	return chatsStore.currentChat.email
 }
 
+
+$proxy.getMessages = (val)=>{
+	const chatId = $proxy.chat?.id
+
+	return chatsStore.messagesByChat[chatId] || []
+}
 const chatsListeners = {}
 
-$spa.watch('chat', ()=>{
-	const val = $proxy.chat
-	if(!val?.id) return
+chatsStore.watch('messagesByChat', (val)=>{
+	const chatId = $proxy.chat?.id
+	$proxy.chatMessages = val[chatId] || []
 
-	if(!messagesStore[val.id]) {
-		if(chatsListeners[val.id]) return
-		messagesStore[val.id] = []
-		$proxy.chatMessages = []
-		chatsListeners[val.id] = getFireSnapshot('messages',  [['chat', '==', val.id]],{ 
-			add: (data)=> {
-				messagesStore[val.id].push(buildName(data))
-				$proxy.chatMessages.push(buildName(data))
-			} 
-		})
-	} else {
-		$proxy.chatMessages = [...messagesStore[val.id]]
-	}
+})
+
+chatsStore.watch('currentChatMessages', val=>{
+	$proxy.chatMessages = val
+})
+
+$spa.watch('chat', async ()=>{
+	const val = $proxy.chat
+
+	if(!val?.id) return
+	loadProfilesByIds(Object.keys(val.members))
+	await loadChatMessagesSorted(val.id)
+	$proxy.chatMessages = chatsStore.messagesByChat[val.id] || []
 })
 
 $proxy.inputValue = ''
 $proxy.chat = ''
 
 $proxy.getMessageClass = (index)=>{
-	if(!index) return
+
+	if(index === null || index === undefined) return
  	const message = $proxy.chatMessages[parseInt(index)]
 
 	const classList = ['flex']
-	if(message.creator === getUser().uid) {
+	if(message?.creator === getUser().uid) {
 		classList.push('justify-end')
 	} else {
 		classList.push('justify-start')
@@ -79,7 +87,7 @@ $proxy.getMessageClass = (index)=>{
 }
 
 function onSendClick(){
-	if(!$proxy.chat || !$proxy.chat.id) return
+	if(!$proxy.chat || !$proxy.chat?.id) return
 
 	sendMessage({
 		chat: $proxy.chat.id,
@@ -87,5 +95,6 @@ function onSendClick(){
 		type: 'user', // room, group, entity
 		to: Object.keys($proxy.chat.members),
 	})
+
 }
 </script>

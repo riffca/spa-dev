@@ -1,9 +1,12 @@
 import { createStore } from '../store.js'
 import { usersStore, loadProfilesByIds } from './users.js'
-import { addFireDoc, getUser, getFireSnapshot, getUserId } from '../firestore/lib.js'
+import { addFireDoc, getUser, getFireSnapshot, getUserId, getFireDocs, useSnapshotListner  } from '../firestore/lib.js'
 
 const collectionName = 'chats'
 const messagesCollectionName = 'messages'
+
+
+const { setSnapshotListnerSorted } = useSnapshotListner('snap-chats')
 
 export const chatsStore = createStore(collectionName)
 
@@ -11,10 +14,15 @@ export function init(){
     chatsStore.userChats = []
     chatsStore.messagesByChat = {}
     chatsStore.currentChat = {}
+    chatsStore.currentChatMessages = []
 }
 
+
 export function setCurrentChat(val){
+    if(!val) return
     chatsStore.currentChat = val
+
+    chatsStore.currentChat.messages = chatsStore.messagesByChat[val.id]
 }
 
 export function sendMessage({
@@ -97,6 +105,41 @@ export function setupChatSnapshot(chatId){
             } 
         })
     } 
+}
+
+export async function loadChatMessages(chatId){
+    const docs = await getFireDocs(messagesCollectionName, ['chat', '==', chatId])
+    if(!chatsStore.messagesByChat[chatId]) {
+        chatsStore.messagesByChat[chatId] = []
+    }
+    chatsStore.messagesByChat[chatId] = [...docs]
+}
+
+
+
+
+
+export async function loadChatMessagesSorted(chatId){
+
+    function run(messages){
+        chatsStore.messagesByChat[chatId].push(...messages)
+        //chatsStore.setValue('currentChatMessages', messages)
+        chatsStore.currentChatMessages = [...chatsStore.currentChatMessages, ...messages]
+    }
+
+    setSnapshotListnerSorted(messagesCollectionName, { 
+        query: [
+            ['chat', '==', chatId],
+            //['created','>', new Date(Date.now() + 10000)],
+        ],
+        targetMapSetter: {
+            add:(messages)=>run(messages),
+            update:(messages)=>run(messages),
+            delete:(messages)=>run(messages)
+        },
+        targetMap: chatsStore.messagesByChat,
+        mapKey: chatId,
+    })
 }
 
 

@@ -24,7 +24,6 @@ export function createStore(name){
 
 			watchers[prop].push(func)
 		},
-		
 		get(target, prop, receiver) {
 			const value = target[prop];
 			if (value instanceof Function) {
@@ -67,8 +66,32 @@ export function createStore(name){
 		},
 	}
 	const store = new Proxy(app, app);
+	store.setValue = setValue
 
 	definedStores[name] = store 
+
+	function setValue(prop, value, merge=true) {
+			console.log(typeof this[prop], this[prop])
+			if(Array.isArray(this[prop])) {
+				if(merge) {
+        			this[prop] = [ ...this[prop] , ...value ] 
+				} else {
+					this[prop] = value
+				}
+				return
+			}
+			if(typeof this[prop] === 'object' && typeof this[prop] !== null) {
+				if(merge) {
+        			this[prop] = { ...this[prop] , ...value } 
+        		} else {
+					this[prop] = value
+				}
+				return
+			}
+
+			this[prop] = value
+
+		}
 
 	function reactWatchers(prop, value){
 		watchers[prop]?.forEach(action=>{

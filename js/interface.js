@@ -149,12 +149,22 @@ export function initCustomElement({
 				runHandler(this.componentId, event, root)
 			}
 
-			onRender(attrName, newValue = null){
-				this.listen(attrName, newValue ? newValue : this.getAttribute(attrName))
-				setupLists(this, this.getJSON(attrName, newValue))
-				updateTemplates(this, this.getJSON(attrName, newValue))
-				updateDatasetAttrs(this, this.getJSON(attrName, newValue))
-				updateHidden(this, this.getJSON(attrName, newValue))
+			onRender(...args){
+				//setTimeout(()=>{
+					this.onRenderBasic(...args)
+				//})
+			}
+
+
+			onRenderBasic(attrName, newValue = null, oldValue=null){
+				const getParams = ()=> attrName ? this.getJSON(attrName, newValue) : this.proxy
+
+				attrName && this.listen(attrName, newValue ? newValue : this.getAttribute(attrName))
+
+				setupLists(this, getParams())
+				updateTemplates({ target: this, object: getParams()})
+				updateDatasetAttrs(this, getParams())
+				updateHidden(this, getParams())
 			}
 			onInit(){
 				this.componentId = this.getAttribute('data-init')
@@ -176,8 +186,7 @@ export function initCustomElement({
 						})
 						this.initInputEvents()
 					}
-
-				}, { capture: true})
+				}, { capture: false } )
 
 			}
 
@@ -203,6 +212,10 @@ export function initCustomElement({
 				definedComponentsProxies[this.componentId] = this.proxy
 
 				initDataModel(this, this.proxy)
+
+				$spa.watch(this.componentId, 'onUpdate', (val, oldValue)=>{
+					this.onRender(val, oldValue)
+				},true)
 			}
 
 			initEnvents(){
@@ -332,7 +345,25 @@ export function bindProxy(selector, extender, options) {
 			//return Reflect.get(target, prop).bind(target);
 		},
 		set(target, prop, value) {
+			//const old = JSON.parse(JSON.stringify(target))
 			target[prop] = value
+
+			const updateObject = {}
+
+			Object.keys(this).forEach(key=>{
+				if(typeof this[key] === 'function'){
+					updateObject[key] = this[key]
+				} 
+			})
+
+			updateObject[prop] = value
+
+			setTimeout(this.onUpdate(updateObject))
+
+
+			// if (value instanceof Function) {
+			// 	return true
+			// }
 
 			if(this.parent) {
 				const { parent, value, key } = getRootParent(this, target, prop)
@@ -359,6 +390,18 @@ export function bindProxy(selector, extender, options) {
 				})
 			} 
 		},
+
+		onUpdate(proxy, oldValue){
+			const updateWatcher = watchers[currentElement.dataset.init]['onUpdate']
+			if(updateWatcher) {
+				const actions = updateWatcher
+				if(Array.isArray(actions)) {
+					actions.forEach(fn=>{
+						fn(proxy)
+					})
+				} 		
+			}
+		}
 	}
 
 	const wrap = new Proxy(app, handler)
@@ -368,28 +411,43 @@ export function bindProxy(selector, extender, options) {
 	return wrap
 }
 
-function getTemplateValue(text, object, index=null, proxy=null){
+export function getTemplateValue(text, object, index=null, proxy=null, targetNode){
+	if(text.includes('getChatName')) {
+		console.log(index, text, object)
+	}
+	if(!text.template) return
 	let insertText = text.template(object, index)
 	if(!insertText) {
 		insertText = text.template(proxy, index)
-
-		console.log(text, proxy)
 	}
 	return insertText
 }
 
 
-function updateTemplates(target, object, index=null, proxy=null){
+export function updateTemplates({
+	target, object, index=null, proxy=null,
+	list=false
+}){
 	proxy = target.proxy || proxy
-	index = target.dataset.listIndex || index
-	//console.log(index, target)
+
+	const currentIndex = typeof index === 'number' ? index : target.dataset.listindex 
 
 	Object.keys(object).forEach(key=>{
 		if(['null', 'undefined'].includes(object[key])){
 			object[key] = ''
 		}
 	})
-	const components = target.querySelectorAll(':not([data-list-index])');
+
+	const query = list ? '*' : ':not([data-list-index])'
+
+
+	const components = target.querySelectorAll(query);
+	const div = document.createElement('div')
+	const items = div.querySelectorAll('[data-list-index]')
+	div.replaceChildren(components);
+
+	console.log(items);
+
 	[...components].forEach(comp=>{
 		const textContent = comp.textContent.slice()
 		const childNodes = comp.childNodes;
@@ -403,8 +461,12 @@ function updateTemplates(target, object, index=null, proxy=null){
 		  			if(renderText.includes(key)) {
 		  				if(object[key] === undefined) return
 		  				if(object[key] === null) return
-		  				//currentNode.textContent = renderText.template(object, index)
-		  				currentNode.textContent = getTemplateValue(renderText, object, index, proxy)
+		  				//currentNode.textContent = renderText.template(object, currentIndex)
+		  				const newValue = getTemplateValue(renderText, object, currentIndex, proxy,currentNode)	
+		  				const oldValue = currentNode.textContent
+		  				if(newValue !== oldValue) {
+		  					currentNode.textContent = newValue
+		  				}
 		  			}
 		  		})
 		  	}
@@ -417,9 +479,14 @@ function updateTemplates(target, object, index=null, proxy=null){
 		  			if(!parent.hasAttribute('data-render')) {
 		  				parent.setAttribute('data-render', parent.textContent.slice())
 		  			}
-		  			//parent.textContent = value.template(object, index)
-		  			parent.textContent = getTemplateValue(value, object, index, proxy)
+		  			//parent.textContent = value.template(object, currentIndex)
+		  			//if(!value) return
 
+		  			const newValue = getTemplateValue(value, object, currentIndex, proxy, parent)	
+		  			const oldValue = parent.textContent
+		  			if(newValue !== oldValue) {
+		  				parent.textContent = newValue
+		  			}
 	
 				}	
 		  	}
@@ -428,7 +495,12 @@ function updateTemplates(target, object, index=null, proxy=null){
 	})
 }
 
-function setupLists(target, object) {
+
+let prevObject = {}
+
+export function setupLists(target, object) {
+	if(JSON.stringify(prevObject) === JSON.stringify(object)) return
+
 	const components = target.querySelectorAll('[data-list]');
 	[...components].forEach(comp=>{
 		const listKey = comp.dataset.list
@@ -436,13 +508,14 @@ function setupLists(target, object) {
 		Object.keys(object).forEach(key=>{
 			if(key === listKey) {
 				const list = object[key]
+				const renderList = typeof list === 'function' ? list() : list
+				//console.log(233,prevObject, object)
+				prevObject = renderList
+				if(!Array.isArray(renderList)) return
 				const tempWrap = []
-				list.forEach(async (item, index)=>{
+				renderList.forEach(async (item, index)=>{
 					const template = target.listTemplates[listKey].cloneNode(true);
 					template.setAttribute('data-list-index', index);
-
-
-					updateTemplates(template, item, index, target.proxy);
 					//console.log('aaaaaaa', index);
 
 					// const childNodes = template.querySelectorAll('*');
@@ -462,6 +535,9 @@ function setupLists(target, object) {
 						[...childNodes].forEach((child)=>{
 							child.setAttribute('data-list-index', index);
 							updateAttrsTemplates(child, item, target.proxy)
+
+							updateTemplates({ target: child, object: item, index, proxy: target.proxy, list: true });
+
 							if(child.dataset.click) {
 								const handler = (event)=>{
 									definedHandlers[target.dataset.init][child.dataset.click](event, item)
@@ -479,7 +555,7 @@ function setupLists(target, object) {
 	})
 }
 
-function updateHidden(target, object) {
+export function updateHidden(target, object) {
 	const components = target.querySelectorAll('[data-show]');
 	[...components].forEach(comp=>{
 		const path = comp.dataset.show
@@ -512,7 +588,7 @@ function updateHidden(target, object) {
 	})
 }
 
-function updateDatasetAttrs(component, object) {
+export function updateDatasetAttrs(component, object) {
 	const attributes = ['class', 'src', 'href', 'value','label'].map(item=>`[data-${item}]`).join(',')
 	interateBySelector(component, attributes, (element)=>{
 		//element.dataset.class && element.dataset.class && console.log('index', element, element.dataset.listIndex)
@@ -520,13 +596,13 @@ function updateDatasetAttrs(component, object) {
 	})
 }
 
-function loopKeys(){
+export function loopKeys(){
 	Object.keys(object).forEach(key=>{ 
 		cb(key, object[key])
 	})
 }
 
-function setValue(proxy, prop, value){
+export function setValue(proxy, prop, value){
 	if(Array.isArray(proxy[prop])) {
 		proxy[prop] = [...proxy[prop], value]
 		return
@@ -544,7 +620,7 @@ function setValue(proxy, prop, value){
 	proxy[prop] = value
 }
 
-function getValue(proxy, prop){
+export function getValue(proxy, prop){
 	const inner = prop.split('.')
 	if(inner.length > 1) {
 		return proxy[inner[0]][inner[1]]
@@ -553,7 +629,7 @@ function getValue(proxy, prop){
 }
 
 
-function setInnerProp(target, prop, value){
+export function setInnerProp(target, prop, value){
 	let result
 	const keys = prop.split('.')
 	keys.forEach((item,index)=>{
@@ -568,7 +644,7 @@ function setInnerProp(target, prop, value){
 	result[keys.at(-1)] = value
 }
 
-function getInnerProp(target, prop){
+export function getInnerProp(target, prop){
 	let result
 	const keys = prop.split('.')
 	keys.forEach((item,index)=>{
@@ -581,7 +657,7 @@ function getInnerProp(target, prop){
 	return result
 }
 
-function hasInnerProp(target, prop){
+export function hasInnerProp(target, prop){
 	let result
 	const keys = prop.split('.')
 	keys.forEach((item,index)=>{
@@ -599,7 +675,7 @@ function hasInnerProp(target, prop){
 
 
 
-function initDataModel(component, proxy){
+export function initDataModel(component, proxy){
 	interateBySelector(component, '[data-model], [data-value]', (element)=>{
 		const prop = element.dataset.model || element.dataset.value
 
@@ -631,7 +707,7 @@ function initDataModel(component, proxy){
 	})
 }
 
-function updateAttrsTemplates(component, object, proxy=null, index=null) {
+export function updateAttrsTemplates(component, object, proxy=null, index=null) {
 	Object.keys(object).forEach(prop=>{
 		if(component.dataset) {
 			const dataset = {...component.dataset }
@@ -654,7 +730,7 @@ function updateAttrsTemplates(component, object, proxy=null, index=null) {
 	}
 }
 
-function interateBySelector(component, selector, cb){
+export function interateBySelector(component, selector, cb){
 	const components = component.querySelectorAll(selector);
 	[...components].forEach(item=>{
 		cb(item)
@@ -671,20 +747,20 @@ function interateBySelector(component, selector, cb){
 // 	})
 // }
 
-function checkHasParentList(component){
+export function checkHasParentList(component){
 	if(!component.parentElement) return false
 	if(component.parentElement.dataset.list) return true
 	return checkHasParentList(component.parentElement)
 
 }
 
-const getParentNodeWithClick = (node)=>{
+export const getParentNodeWithClick = (node)=>{
 	if(!node.parentElement) return false
 	if(node.dataset.click && node.parentElement.dataset.parent === node.dataset.parent) return node
 	return getParentNodeWithClick(node.parentElement)
 }
 
-function runHandler(componentId, event, root=null) {
+export function runHandler(componentId, event, root=null) {
 	let component = event.target
 
 	if(checkHasParentList(component)) return
@@ -704,8 +780,11 @@ function runHandler(componentId, event, root=null) {
 }
 
 
-const makeCamelCase = str => str.split('-').map((e,i) => i ? e.charAt(0).toUpperCase() + e.slice(1).toLowerCase() : e.toLowerCase()).join('')
-function getJSON(key, value=null, target){
+export const makeCamelCase = str => { 
+	if(typeof str.split !== 'function') return ''
+	return str.split('-').map((e,i) => i ? e.charAt(0).toUpperCase() + e.slice(1).toLowerCase() : e.toLowerCase()).join('')
+}
+export function getJSON(key, value=null, target){
 	const camelCase = makeCamelCase(key)
 	return {
 		[makeCamelCase(key)]: value ? checkIsValidJson(value) : checkIsValidJson(target.getAttribute(key))

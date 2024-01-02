@@ -1,6 +1,6 @@
-<div>
-	<div data-list="chats">
-		<div data-click="onChatClick" class="cursor-pointer">
+<div class="h-full">
+	<div class="sticky bottom-0 flex justify-around gap-2 overflow-scroll-x" data-list="chats">
+		<div data-class="getChatNameClass" data-click="onChatClick">
 			<div>{getChatName}</div>
 		</div>
 	</div>
@@ -13,15 +13,25 @@ import { chatsStore, setCurrentChat } from './js/store/chats.js'
 
 $spa.initCustomElement({
 	name: 'chats',
-	attrs: ['chats', 'get-chat-name'],
+	attrs: ['chats'],
 	events: ['clickchat'],
 });
 
+$proxy.chats = []
+$proxy.currentChat = null
+
 $proxy.getChatName = (index)=> {
+	//console.log(222,index)
 	const item = $proxy.chats[index]
 	if(item){
 		return item.email || item.id
 	}
+}
+$proxy.getChatNameClass = (index)=> {
+	const item = $proxy.chats[index]
+	const color = item?.id === $proxy.current?.id ? 'bg-gray-500' : 'bg-gray-300'
+
+	return 'p-2 cursor-pointer ' + color
 }
 
 usersStore.watch('profiles',(val)=>{
@@ -44,6 +54,7 @@ authStore.watch('profile',()=>{
 function onChatClick(event){
 	const val = $proxy.chats[event.target.dataset.listIndex]
 	setCurrentChat(val)
+	$proxy.currentChat = val
 	$element.emit('clickchat', val)
 }
 </script>

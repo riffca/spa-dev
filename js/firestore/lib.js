@@ -346,6 +346,7 @@ export function createStringSearchMeta(txt) {
   return map
 }
 
+export function getQueryTime() { Timestamp.fromMillis(Date.now()) }
 //roles
 //https://firebase.google.com/docs/firestore/solutions/role-based-access
 
@@ -393,18 +394,23 @@ export function useSnapshotListner(snapshotKey = "") {
 
   async function setSnapshotListnerSorted(
     collection,
+  {
     query,
     targetMap,
+    targetMapSetter,
     mapKey,
-    func
-  ) {
+    callback,
+    limit=100,
+  }) {
     if (!targetMap[mapKey]) {
       targetMap[mapKey] = []
     }
+
     if (hasListenerSnapshot[collection + ":" + mapKey]) return
     hasListenerSnapshot[collection + ":" + mapKey] = true
 
-    const docs = await getFireDocs(collection, query, 100, true)
+    const docs = await getFireDocs(collection, query, limit, true)
+    targetMapSetter?.add && targetMapSetter?.add(docs)
     targetMap[mapKey].push(...docs)
 
     const snapShotTimeQuery = [
@@ -419,11 +425,11 @@ export function useSnapshotListner(snapshotKey = "") {
     ] = await getFireSnapshot(
       collection,
       query,
-      getCrudMethods(targetMap, mapKey)
-    )
+      getCrudMethods(targetMap, mapKey, targetMapSetter)
+    ) 
 
-    if (func) {
-      await func()
+    if (callback) {
+      await callback()
     }
   }
 
@@ -443,13 +449,13 @@ export function useSnapshotListner(snapshotKey = "") {
   }
 
   return {
-    setSnapshotListnerSorted: loadingDecorator(setSnapshotListnerSorted),
+    setSnapshotListnerSorted: setSnapshotListnerSorted,
     setSnapshotListner: loadingDecorator(setSnapshotListner),
     setSnapshotListnerArray: loadingDecorator(setSnapshotListnerArray)
   }
 }
 
-export function getCrudMethods(targetMap, uniqueId) {
+export function getCrudMethods(targetMap, uniqueId, targetMapSetter=null) {
   const uuid = docId => {
     return typeof uniqueId === "function" ? uniqueId(docId) : uniqueId
   }
@@ -459,6 +465,7 @@ export function getCrudMethods(targetMap, uniqueId) {
       if (!targetMap[uuid(doc.id)]) {
         targetMap[uuid(doc.id)] = []
       }
+      targetMapSetter?.add && targetMapSetter?.add([doc])
       targetMap[uuid(doc.id)].push(doc)
     },
     delete: doc => {
@@ -466,12 +473,15 @@ export function getCrudMethods(targetMap, uniqueId) {
         item => item.id === doc.id
       )
       targetMap[uuid(doc.id)].splice(index, 1)
+      targetMapSetter?.delete && targetMapSetter?.delete([doc])
     },
     update: doc => {
       const index = targetMap[uuid(doc.id)].findIndex(
         item => item.id === doc.id
       )
       targetMap[uuid(doc.id)].splice(index, 1, doc)
+      targetMapSetter?.update && targetMapSetter?.update([doc])
+
     }
   }
 }
