@@ -1,10 +1,10 @@
 <div class="bg-blue-200 h-full flex flex-col">
 	<div class="grow-1">{chat.id}</div>
 	<div class="shrink-0">
-		<div class="" data-list="chatMessages">
+		<div class="" data-list="chatMessages" data-list-name="message" data-list-key="message.id">
 			<div data-class="getMessageClass">
-				<div class="p-2">{text}</div>
-				<div class="text-bold">{author}</div>	
+				<div class="p-2">{message.text}</div>
+				<div class="text-bold">{message.author}</div>	
 			</div>
 		</div>
 		<div class="sticky bottom-0 grow-1 gap-4 flex p-4 w-full ">
